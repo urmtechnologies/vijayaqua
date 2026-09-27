@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockEntryItem extends Model
 {
-    protected $fillable = ['product_id', 'cartons'];
+    protected $fillable = ['product_id', 'cartons', 'type'];
 
     protected function casts(): array
     {

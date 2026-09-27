@@ -1,0 +1,7 @@
+<div class="col-12 col-md-3"><label class="form-label">Partner / Note</label><input type="search" name="search" class="form-control" placeholder="Search..." value="{{ request('search') }}" maxlength="100"></div>
+<div class="col-12 col-md-2"><label class="form-label">Type</label><select name="type" class="form-select"><option value="">Both types</option><option value="send" @selected(request('type') === 'send')>Send</option><option value="receive" @selected(request('type') === 'receive')>Receive</option></select></div>
+<div class="col-6 col-md-2"><label class="form-label">From</label><input type="date" name="from" class="form-control" value="{{ request('from') }}"></div>
+<div class="col-6 col-md-2"><label class="form-label">To</label><input type="date" name="to" class="form-control" value="{{ request('to') }}"></div>
+<div class="col-12 col-md-auto"><label class="form-label">Sort</label><select name="sort" class="form-select"><option value="newest" @selected(request('sort', 'newest') === 'newest')>Newest</option><option value="oldest" @selected(request('sort') === 'oldest')>Oldest</option></select></div>
+<div class="col-6 col-md-auto"><button type="submit" class="btn btn-primary w-100">Apply</button></div>
+<div class="col-6 col-md-auto"><a href="{{ $filterUrl }}" class="btn btn-outline-secondary w-100 va-clear-filters">Clear</a></div>

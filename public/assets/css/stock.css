@@ -13,7 +13,7 @@
 
 .va-stock-row {
     display: grid;
-    grid-template-columns: 32px minmax(220px, 1fr) minmax(140px, 180px) 42px;
+    grid-template-columns: 32px minmax(200px, 1fr) minmax(120px, 160px) minmax(150px, 180px) 42px;
     gap: 13px;
     align-items: end;
     padding: 16px;
@@ -71,10 +71,11 @@
 .va-stock-form-total { display: flex; align-items: baseline; gap: 10px; }
 .va-stock-form-total strong { font-size: 20px; }
 
-@media (max-width: 700px) {
+@media (max-width: 1100px) {
     .va-stock-row { grid-template-columns: 28px minmax(0, 1fr) 42px; }
     .va-stock-product { grid-column: 2 / 4; }
     .va-stock-cartons { grid-column: 2 / 3; }
-    .va-stock-remove { grid-column: 3 / 4; }
-    .va-stock-row-number { grid-row: 1 / 3; align-self: start; }
+    .va-stock-type-field { grid-column: 2 / 3; }
+    .va-stock-remove { grid-column: 3 / 4; grid-row: 3; }
+    .va-stock-row-number { grid-row: 1 / 4; align-self: start; }
 }

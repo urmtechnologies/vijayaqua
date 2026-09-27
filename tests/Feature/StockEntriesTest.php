@@ -30,8 +30,8 @@ class StockEntriesTest extends TestCase
         $this->post(route('stock-entries.store'), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [
-                ['product_id' => $jar->id, 'cartons' => 2],
-                ['product_id' => $bottle->id, 'cartons' => 3],
+                ['product_id' => $jar->id, 'cartons' => 2, 'type' => 'manufacture'],
+                ['product_id' => $bottle->id, 'cartons' => 3, 'type' => 'manufacture'],
             ],
             'user_id' => 99999,
         ])->assertRedirect(route('stock-entries.index'));
@@ -43,7 +43,7 @@ class StockEntriesTest extends TestCase
         $this->withHeader('X-Requested-With', 'XMLHttpRequest')
             ->get(route('stock-entries.index', [
                 'search' => 'Jar', 'from' => '2026-09-27', 'to' => '2026-09-27',
-            ]))->assertOk()->assertSeeText('5 CTN')->assertSeeText('Admin');
+            ]))->assertOk()->assertSeeText('2 CTN')->assertSeeText('Admin');
 
         $this->get(route('stock-entries.show', $entry))
             ->assertOk()->assertSeeText('20 Litre Jar')->assertSeeText('Small Bottle');
@@ -64,13 +64,13 @@ class StockEntriesTest extends TestCase
 
         $this->put(route('stock-entries.update', $entry), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
-            'items' => [['product_id' => $bottle->id, 'cartons' => 8]],
+            'items' => [['product_id' => $bottle->id, 'cartons' => 8, 'type' => 'manufacture']],
         ])->assertRedirect(route('stock-entries.show', $entry));
 
         $this->assertSame($admin->id, $entry->fresh()->user_id);
         $this->assertSame('2026-09-27', $entry->fresh()->entry_date->format('Y-m-d'));
         $this->assertDatabaseMissing('stock_entry_items', ['stock_entry_id' => $entry->id, 'product_id' => $jar->id]);
-        $this->assertDatabaseHas('stock_entry_items', ['stock_entry_id' => $entry->id, 'product_id' => $bottle->id, 'cartons' => 8]);
+        $this->assertDatabaseHas('stock_entry_items', ['stock_entry_id' => $entry->id, 'product_id' => $bottle->id, 'cartons' => 8, 'type' => 'manufacture']);
     }
 
     public function test_duplicate_or_inactive_product_is_rejected_without_changing_entry(): void
@@ -85,14 +85,14 @@ class StockEntriesTest extends TestCase
         $this->post(route('stock-entries.store'), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [
-                ['product_id' => $jar->id, 'cartons' => 1],
-                ['product_id' => $jar->id, 'cartons' => 2],
+                ['product_id' => $jar->id, 'cartons' => 1, 'type' => 'manufacture'],
+                ['product_id' => $jar->id, 'cartons' => 2, 'type' => 'manufacture'],
             ],
         ])->assertSessionHasErrors('items.1.product_id');
 
         $this->put(route('stock-entries.update', $entry), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
-            'items' => [['product_id' => $inactive->id, 'cartons' => 3]],
+            'items' => [['product_id' => $inactive->id, 'cartons' => 3, 'type' => 'manufacture']],
         ])->assertSessionHasErrors('items.0.product_id');
 
         $this->assertSame(4, $entry->items()->firstOrFail()->cartons);
@@ -111,7 +111,7 @@ class StockEntriesTest extends TestCase
         $this->get(route('stock-entries.edit', $entry))->assertOk()->assertSee('20 Litre Jar');
         $this->put(route('stock-entries.update', $entry), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
-            'items' => [['product_id' => $jar->id, 'cartons' => 6]],
+            'items' => [['product_id' => $jar->id, 'cartons' => 6, 'type' => 'manufacture']],
         ])->assertRedirect(route('stock-entries.show', $entry));
 
         $this->assertSame(6, $entry->items()->firstOrFail()->cartons);

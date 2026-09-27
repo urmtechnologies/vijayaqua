@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
-@section('title', 'Stock List')
-@section('page-title', 'Stock List')
+@section('title', 'Stock Entries')
+@section('page-title', 'Stock Entries')
 @section('page-action')
     <a href="{{ route('stock-entries.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Stock Entry</a>
 @endsection

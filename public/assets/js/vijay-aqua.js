@@ -21,4 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
             menuToggle.parentElement.classList.toggle('mm-active', open);
         });
     });
+
+    const dialog = document.getElementById('vaDeleteModal');
+    const confirm = document.getElementById('vaDeleteConfirm');
+    let selectedForm = null;
+    document.addEventListener('click', event => {
+        const trigger = event.target.closest('[data-va-delete]');
+        if (!trigger || !dialog) return;
+        selectedForm = trigger.closest('form');
+        document.getElementById('vaDeleteName').textContent = trigger.dataset.vaDeleteName || 'This record';
+        confirm.disabled = false;
+        document.getElementById('vaDeleteSpinner').classList.add('d-none');
+        document.getElementById('vaDeleteLabel').textContent = 'Yes, delete';
+        bootstrap.Modal.getOrCreateInstance(dialog).show();
+    });
+    confirm?.addEventListener('click', () => {
+        if (!selectedForm || confirm.disabled) return;
+        confirm.disabled = true;
+        document.getElementById('vaDeleteSpinner').classList.remove('d-none');
+        document.getElementById('vaDeleteLabel').textContent = 'Deleting...';
+        HTMLFormElement.prototype.submit.call(selectedForm);
+    });
+    dialog?.addEventListener('hidden.bs.modal', () => { selectedForm = null; });
 });

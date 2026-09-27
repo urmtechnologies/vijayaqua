@@ -29,13 +29,14 @@ class StockEntryController extends Controller
 
         $query = StockEntry::query();
 
-        if ($search = trim($filters['search'] ?? '')) {
-            $query->whereHas('items.product', function ($product) use ($search): void {
-                $product->withTrashed()->where('name', 'like', '%'.$search.'%');
-            });
-        }
-        if ($type = $filters['type'] ?? null) {
-            $query->where('type', $type);
+        $search = trim($filters['search'] ?? '');
+        $type = $filters['type'] ?? null;
+        $matchedItem = function ($item) use ($search, $type): void {
+            if ($type) $item->where('type', $type);
+            if ($search) $item->whereHas('product', fn ($product) => $product->withTrashed()->where('name', 'like', '%'.$search.'%'));
+        };
+        if ($search || $type) {
+            $query->whereHas('items', $matchedItem);
         }
         if ($from = $filters['from'] ?? null) {
             $query->whereDate('entry_date', '>=', $from);
@@ -48,10 +49,13 @@ class StockEntryController extends Controller
             'entries' => (clone $query)->count(),
             'cartons' => StockEntryItem::query()
                 ->whereIn('stock_entry_id', (clone $query)->select('stock_entries.id'))
+                ->when($search || $type, $matchedItem)
                 ->sum('cartons'),
         ];
 
-        $query->with(['creator', 'editor'])->withCount('items')->withSum('items as carton_total', 'cartons');
+        $query->with(['creator', 'editor', 'items:id,stock_entry_id,type'])
+            ->withCount(['items' => $matchedItem])
+            ->withSum(['items as carton_total' => $matchedItem], 'cartons');
         if (($filters['sort'] ?? 'newest') === 'oldest') {
             $query->orderBy('entry_date')->orderBy('id');
         } else {
@@ -77,7 +81,7 @@ class StockEntryController extends Controller
         $data = $this->validated($request);
 
         DB::transaction(function () use ($data): void {
-            $entry = StockEntry::create(['entry_date' => $data['entry_date'], 'type' => $data['type']]);
+            $entry = StockEntry::create(['entry_date' => $data['entry_date'], 'type' => $this->singleType($data['items'])]);
             $entry->items()->createMany($data['items']);
         });
 
@@ -121,7 +125,7 @@ class StockEntryController extends Controller
                     ]);
                 }
             }
-            $entry->update(['entry_date' => $data['entry_date'], 'type' => $data['type']]);
+            $entry->update(['entry_date' => $data['entry_date'], 'type' => $this->singleType($data['items'])]);
             $entry->items()->delete();
             $entry->items()->createMany($data['items']);
             $entry->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
@@ -130,14 +134,38 @@ class StockEntryController extends Controller
         return redirect()->route('stock-entries.show', $stockEntry)->with('success', 'Stock entry updated successfully.');
     }
 
+    public function destroy(StockEntry $stockEntry): RedirectResponse
+    {
+        DB::transaction(function () use ($stockEntry): void {
+            $entry = StockEntry::whereKey($stockEntry->id)->lockForUpdate()->firstOrFail();
+            $old = $entry->items()->pluck('cartons', 'product_id');
+            Product::withTrashed()->whereIn('id', $old->keys())->orderBy('id')->lockForUpdate()->get();
+            foreach ($old as $productId => $cartons) {
+                if (StockBalance::received((int) $productId) - (int) $cartons < StockBalance::sold((int) $productId)) {
+                    throw ValidationException::withMessages(['stock_entry' => 'Cannot delete stock already used by sales.']);
+                }
+            }
+            $entry->delete();
+        }, 3);
+
+        return redirect()->route('stock-entries.index')->with('success', 'Stock entry removed.');
+    }
+
+    private function singleType(array $items): ?string
+    {
+        $types = array_unique(array_column($items, 'type'));
+
+        return count($types) === 1 ? $types[0] : null;
+    }
+
     private function validated(Request $request, ?StockEntry $entry = null): array
     {
         $data = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
-            'type' => ['required', Rule::in(['manufacture', 'purchase'])],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')],
             'items.*.cartons' => ['required', 'integer', 'min:1', 'max:1000000000'],
+            'items.*.type' => ['required', Rule::in(['manufacture', 'purchase'])],
         ]);
 
         $existingIds = $entry ? $entry->items()->pluck('product_id')->map(fn ($id) => (int) $id)->all() : [];

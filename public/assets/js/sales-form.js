@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vehicle.setCustomValidity(total > limit || subtotal > limit ? 'Amount exceeds the supported limit.' : '');
         dueDate.required = due > 0n;
         dueDate.min = saleDate.value;
-        method.required = received > 0n;
+        if (method) method.required = received > 0n;
         document.getElementById('saleSubtotal').textContent = money(subtotal);
         document.getElementById('saleTotal').textContent = money(total);
         document.getElementById('saleDue').textContent = money(due);
@@ -235,6 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; }
         document.getElementById('saveSale').disabled = true;
         document.getElementById('saleSpinner').classList.remove('d-none');
-        document.getElementById('saleButtonText').textContent = 'Creating invoice...';
+        document.getElementById('saleButtonText').textContent = form.querySelector('input[name="_method"]') ? 'Saving changes...' : 'Creating invoice...';
     });
 });

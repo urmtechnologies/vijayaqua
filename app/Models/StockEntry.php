@@ -6,10 +6,11 @@ use App\Models\Concerns\TracksCreator;
 use App\Models\Concerns\TracksEditor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class StockEntry extends Model
 {
-    use TracksCreator, TracksEditor;
+    use SoftDeletes, TracksCreator, TracksEditor;
 
     protected $fillable = ['entry_date', 'type'];
 

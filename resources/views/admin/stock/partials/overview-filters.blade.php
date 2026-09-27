@@ -1,0 +1,5 @@
+<div class="col-12 col-md-4"><label class="form-label">Product</label><input type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Search product..." maxlength="100"></div>
+<div class="col-12 col-md-2"><label class="form-label">Status</label><select name="status" class="form-select"><option value="">All status</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select></div>
+<div class="col-12 col-md-2"><label class="form-label">Stock</label><select name="availability" class="form-select"><option value="">All stock</option><option value="available" @selected(request('availability') === 'available')>Available</option><option value="empty" @selected(request('availability') === 'empty')>Out of stock</option></select></div>
+<div class="col-6 col-md-auto"><button type="submit" class="btn btn-primary w-100">Apply</button></div>
+<div class="col-6 col-md-auto"><a class="btn btn-outline-secondary w-100 va-clear-filters" href="{{ route('stock.overview') }}">Clear</a></div>

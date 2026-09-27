@@ -26,25 +26,28 @@
                         <li><a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'active' : '' }}">Payments</a></li>
                     </ul>
                 </li>
+                <li><a href="{{ route('upcoming-orders.index') }}" class="{{ request()->routeIs('upcoming-orders.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-clock-outline"></i><span>Upcoming Orders</span></a></li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-calendar-check-outline"></i>Attendance <small>Coming soon</small></span></li>
-                <li class="{{ request()->routeIs('stock-entries.*') ? 'mm-active' : '' }}">
+                <li class="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'mm-active' : '' }}">
                     <a href="#stock-submenu" class="has-arrow va-menu-toggle"
-                       aria-expanded="{{ request()->routeIs('stock-entries.*') ? 'true' : 'false' }}"
+                       aria-expanded="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'true' : 'false' }}"
                        aria-controls="stock-submenu">
                         <i class="mdi mdi-package-variant-closed"></i><span>Stock Management</span>
                     </a>
-                    <ul id="stock-submenu" class="sub-menu mm-collapse {{ request()->routeIs('stock-entries.*') ? 'mm-show' : '' }}">
+                    <ul id="stock-submenu" class="sub-menu mm-collapse {{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'mm-show' : '' }}">
+                        <li><a href="{{ route('stock.overview') }}" class="{{ request()->routeIs('stock.overview') ? 'active' : '' }}">Stock Overview</a></li>
                         <li>
                             <a href="{{ route('stock-entries.create') }}" class="{{ request()->routeIs('stock-entries.create') ? 'active' : '' }}"
                                @if(request()->routeIs('stock-entries.create')) aria-current="page" @endif>Add Stock Entry</a>
                         </li>
                         <li>
                             <a href="{{ route('stock-entries.index') }}" class="{{ request()->routeIs('stock-entries.index', 'stock-entries.show', 'stock-entries.edit') ? 'active' : '' }}"
-                               @if(request()->routeIs('stock-entries.index', 'stock-entries.show', 'stock-entries.edit')) aria-current="page" @endif>Stock List</a>
+                               @if(request()->routeIs('stock-entries.index', 'stock-entries.show', 'stock-entries.edit')) aria-current="page" @endif>Stock Entries</a>
                         </li>
                     </ul>
                 </li>
-                <li><span class="va-nav-pending"><i class="mdi mdi-cash-minus"></i>Expenses <small>Coming soon</small></span></li>
+                <li><a href="{{ route('expenses.index') }}" class="{{ request()->routeIs('expenses.*') ? 'active' : '' }}"><i class="mdi mdi-cash-minus"></i><span>Expenses</span></a></li>
+                <li><a href="{{ route('partner-ledger.index') }}" class="{{ request()->routeIs('partner-ledger.*', 'partners.*') ? 'active' : '' }}"><i class="mdi mdi-swap-horizontal"></i><span>Partner Status</span></a></li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-wallet-outline"></i>Salary <small>Coming soon</small></span></li>
                 <li class="menu-title">Settings</li>
                 <li>

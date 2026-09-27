@@ -2,8 +2,8 @@
     $submittedRows = old('items');
     $rows = is_array($submittedRows)
         ? array_filter($submittedRows, 'is_array')
-        : ($entry?->items->map(fn ($item) => ['product_id' => $item->product_id, 'cartons' => $item->cartons])->all() ?? []);
-    $rows = $rows ?: [['product_id' => '', 'cartons' => '']];
+        : ($entry?->items->map(fn ($item) => ['product_id' => $item->product_id, 'cartons' => $item->cartons, 'type' => $item->type ?? $entry->type])->all() ?? []);
+    $rows = $rows ?: [['product_id' => '', 'cartons' => '', 'type' => '']];
     $productOptions = $products->map(fn ($product) => ['id' => $product->id, 'name' => $product->name, 'available' => $product->status === 'active' && ! $product->trashed()])->values();
 @endphp
 <form action="{{ $entry ? route('stock-entries.update', $entry) : route('stock-entries.store') }}" method="POST" id="stockEntryForm">
@@ -19,21 +19,12 @@
                        value="{{ old('entry_date', $entry?->entry_date?->format('Y-m-d') ?? now()->toDateString()) }}" required>
                 @error('entry_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-6">
-                <label for="stockType" class="form-label">Type <span class="text-danger">*</span></label>
-                <select id="stockType" name="type" class="form-select @error('type') is-invalid @enderror" required>
-                    <option value="">Select type</option>
-                    <option value="manufacture" @selected(old('type', $entry?->type) === 'manufacture')>Manufacture</option>
-                    <option value="purchase" @selected(old('type', $entry?->type) === 'purchase')>Purchase</option>
-                </select>
-                @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div><h4 class="card-title mb-0">Products</h4><small class="text-muted">Add each product once, with its carton quantity.</small></div>
+            <div><h4 class="card-title mb-0">Products</h4><small class="text-muted">Choose a type and carton quantity for each product.</small></div>
             <button type="button" class="btn btn-outline-primary btn-sm" id="addStockRow" @if($products->isEmpty()) disabled @endif>
                 <i class="mdi mdi-plus me-1"></i> Add Product
             </button>
@@ -65,6 +56,15 @@
                                    class="form-control va-stock-qty @error('items.'.$index.'.cartons') is-invalid @enderror"
                                    min="1" max="1000000000" step="1" inputmode="numeric" value="{{ $row['cartons'] ?? '' }}" placeholder="CTN" required>
                             @error('items.'.$index.'.cartons')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="va-stock-type-field">
+                            <label class="form-label" for="stockType{{ $index }}">Type <span class="text-danger">*</span></label>
+                            <select id="stockType{{ $index }}" name="items[{{ $index }}][type]" class="form-select va-stock-type @error('items.'.$index.'.type') is-invalid @enderror" required>
+                                <option value="">Select type</option>
+                                <option value="manufacture" @selected(($row['type'] ?? '') === 'manufacture')>Manufacture</option>
+                                <option value="purchase" @selected(($row['type'] ?? '') === 'purchase')>Purchase</option>
+                            </select>
+                            @error('items.'.$index.'.type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <button type="button" class="btn btn-outline-danger va-stock-remove" aria-label="Remove product row" title="Remove row"><i class="mdi mdi-close"></i></button>
                     </div>
@@ -102,6 +102,9 @@
         <div class="va-stock-cartons">
             <label class="form-label">Quantity (CTN) <span class="text-danger">*</span></label>
             <input type="number" class="form-control va-stock-qty" min="1" max="1000000000" step="1" inputmode="numeric" placeholder="CTN" required>
+        </div>
+        <div class="va-stock-type-field"><label class="form-label">Type <span class="text-danger">*</span></label>
+            <select class="form-select va-stock-type" required><option value="">Select type</option><option value="manufacture">Manufacture</option><option value="purchase">Purchase</option></select>
         </div>
         <button type="button" class="btn btn-outline-danger va-stock-remove" aria-label="Remove product row" title="Remove row"><i class="mdi mdi-close"></i></button>
     </div>

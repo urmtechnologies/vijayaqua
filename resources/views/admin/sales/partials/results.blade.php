@@ -16,8 +16,16 @@
                 <td>{{ $sale->sale_date->format('d M Y') }}</td>
                 <td>₹{{ \App\Support\RupeeAmount::format($sale->total_rupees) }}</td>
                 <td><span class="badge {{ $due > 0 ? 'bg-warning text-dark' : 'bg-success' }}">{{ $due > 0 ? '₹'.\App\Support\RupeeAmount::format($due) : 'Paid' }}</span></td>
-                <td>{{ $sale->creator?->name ?? 'System' }}</td>
-                <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ route('sales.show', $sale) }}">Invoice</a></td>
+                <td>{{ $sale->creator?->name ?? 'System' }}@if($sale->updated_by)<br><small class="text-muted">Edited by {{ $sale->editor?->name ?? 'System' }}</small>@endif</td>
+                <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-outline-primary" href="{{ route('sales.show', $sale) }}">Invoice</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('sales.edit', $sale) }}">Edit</a>
+                    @if((int) ($sale->paid_total ?? 0) === 0)
+                        <form method="POST" action="{{ route('sales.destroy', $sale) }}" class="d-inline">@csrf @method('DELETE')
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-va-delete data-va-delete-name="{{ $sale->invoice_no }}">Delete</button>
+                        </form>
+                    @endif
+                </td>
             </tr>
         @empty
             <tr><td colspan="7" class="text-center text-muted py-5">No invoices found.</td></tr>

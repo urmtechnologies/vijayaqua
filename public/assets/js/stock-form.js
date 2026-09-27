@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 search.value = '';
                 row.querySelector('.va-stock-product-id').value = '';
                 row.querySelector('.va-stock-qty').value = '';
+                row.querySelector('.va-stock-type').value = '';
                 search.focus();
             } else {
                 row.remove();
@@ -129,12 +130,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const index = nextIndex++;
         const search = row.querySelector('.va-stock-search');
         const quantity = row.querySelector('.va-stock-qty');
+        const type = row.querySelector('.va-stock-type');
         search.id = `stockProduct${index}`;
         quantity.id = `stockCartons${index}`;
+        type.id = `stockType${index}`;
         row.querySelectorAll('label')[0].htmlFor = search.id;
         row.querySelectorAll('label')[1].htmlFor = quantity.id;
+        row.querySelectorAll('label')[2].htmlFor = type.id;
         row.querySelector('.va-stock-product-id').name = `items[${index}][product_id]`;
         quantity.name = `items[${index}][cartons]`;
+        type.name = `items[${index}][type]`;
         rows.append(row);
         connectRow(row);
         recalculate();

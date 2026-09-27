@@ -1,0 +1,27 @@
+.va-ledger-note { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.va-order-row {
+    display: grid;
+    grid-template-columns: 30px minmax(220px, 1fr) minmax(140px, 170px) 42px;
+    gap: 12px;
+    align-items: end;
+    border: 1px solid #e8eaf1;
+    border-radius: 12px;
+    padding: 15px;
+    background: #fff;
+}
+.va-order-row-number { align-self: center; color: #6e7789; font-weight: 700; }
+.va-order-product { min-width: 0; }
+.va-order-picker { position: relative; }
+.va-order-options { position: absolute; inset: calc(100% + 4px) 0 auto; z-index: 1050; max-height: 210px; overflow-y: auto; border: 1px solid #dde1eb; border-radius: 9px; padding: 5px; background: #fff; box-shadow: 0 12px 28px rgba(22,30,52,.14); }
+.va-order-options[hidden] { display: none; }
+.va-order-option { display: block; width: 100%; padding: 9px 11px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.va-order-option:hover, .va-order-option.is-active { background: rgba(158,109,202,.12); color: var(--bs-primary); }
+.va-order-remove { height: 38px; }
+@media (max-width: 700px) {
+    .va-order-row { grid-template-columns: 25px minmax(0, 1fr) 42px; gap: 9px; padding: 12px; }
+    .va-order-product { grid-column: 2 / 4; }
+    .va-order-qty-field { grid-column: 2; }
+    .va-order-remove { grid-column: 3; }
+    .va-order-row-number { grid-row: 1 / 3; align-self: start; padding-top: 35px; }
+}

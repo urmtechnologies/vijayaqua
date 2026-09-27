@@ -5,6 +5,12 @@
 @section('page-action')
     <div class="d-flex gap-2 va-no-print">
         <button type="button" class="btn btn-outline-primary" id="printInvoice">Print Invoice</button>
+        <a href="{{ route('sales.edit', $sale) }}" class="btn btn-outline-secondary">Edit Sale</a>
+        @if($sale->payments->isEmpty())
+            <form method="POST" action="{{ route('sales.destroy', $sale) }}" class="d-inline">@csrf @method('DELETE')
+                <button type="button" class="btn btn-outline-danger" data-va-delete data-va-delete-name="{{ $sale->invoice_no }}">Delete</button>
+            </form>
+        @endif
         <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">Sales List</a>
     </div>
 @endsection
@@ -22,6 +28,7 @@
                 <div>{{ $sale->customer->mobile }}</div><a class="va-no-print" href="{{ route('customers.show', $sale->customer) }}">View party account</a>
             </div>
             <div class="col-md-6 text-md-end"><small class="text-muted">Recorded by</small><div>{{ $sale->creator?->name ?? 'System' }}</div>
+                @if($sale->updated_by)<div class="small text-muted">Edited by {{ $sale->editor?->name ?? 'System' }}</div>@endif
                 @if($sale->reference)<div>Reference: {{ $sale->reference }}</div>@endif
             </div>
         </div>

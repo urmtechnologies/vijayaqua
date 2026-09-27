@@ -26,7 +26,7 @@ class SalesLedgerTest extends TestCase
     {
         $this->post(route('stock-entries.store'), [
             'entry_date' => '2026-09-27', 'type' => 'manufacture',
-            'items' => [['product_id' => $product->id, 'cartons' => $cartons]],
+            'items' => [['product_id' => $product->id, 'cartons' => $cartons, 'type' => 'manufacture']],
         ])->assertRedirect(route('stock-entries.index'));
     }
 
@@ -60,7 +60,7 @@ class SalesLedgerTest extends TestCase
         $this->assertSame(1, Customer::count());
         $this->assertSame(2, Sale::count());
         $this->assertSame(200, (int) $first->fresh()->total_rupees);
-        $this->put(route('sales.show', $first), [])->assertStatus(405);
+        $this->get(route('sales.edit', $first))->assertOk()->assertSee($first->invoice_no);
 
         $this->post(route('payments.store'), [
             'sale_id' => $first->id, 'payment_date' => '2026-09-27',
@@ -91,7 +91,7 @@ class SalesLedgerTest extends TestCase
         $entry = \App\Models\StockEntry::firstOrFail();
         $this->put(route('stock-entries.update', $entry), [
             'entry_date' => '2026-09-27', 'type' => 'purchase',
-            'items' => [['product_id' => $product->id, 'cartons' => 1]],
+            'items' => [['product_id' => $product->id, 'cartons' => 1, 'type' => 'purchase']],
         ])->assertSessionHasErrors('items');
         $this->assertSame(2, $entry->items()->firstOrFail()->cartons);
         $this->assertSame('manufacture', $entry->fresh()->type);
@@ -126,7 +126,7 @@ class SalesLedgerTest extends TestCase
         $entry = \App\Models\StockEntry::firstOrFail();
         $this->put(route('stock-entries.update', $entry), [
             'entry_date' => '2026-09-27', 'type' => 'purchase',
-            'items' => [['product_id' => $product->id, 'cartons' => 5]],
+            'items' => [['product_id' => $product->id, 'cartons' => 5, 'type' => 'purchase']],
         ])->assertRedirect(route('stock-entries.show', $entry));
         $this->assertSame($admin->id, $entry->fresh()->updated_by);
         $this->withHeader('X-Requested-With', 'XMLHttpRequest')->get(route('stock-entries.index', ['type' => 'purchase']))

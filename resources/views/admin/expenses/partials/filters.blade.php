@@ -1,0 +1,7 @@
+<div class="col-12 col-md-3"><label class="form-label">Search</label><input type="search" name="search" class="form-control" placeholder="Title or notes..." maxlength="100" value="{{ request('search') }}"></div>
+<div class="col-12 col-md-2"><label class="form-label">Category</label><select name="category" class="form-select"><option value="">All categories</option>@foreach($categories as $category)<option value="{{ $category->id }}" @selected((string) request('category') === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
+<div class="col-6 col-md-2"><label class="form-label">From</label><input type="date" name="from" class="form-control" value="{{ request('from') }}"></div>
+<div class="col-6 col-md-2"><label class="form-label">To</label><input type="date" name="to" class="form-control" value="{{ request('to') }}"></div>
+<div class="col-12 col-md-auto"><label class="form-label">Sort</label><select name="sort" class="form-select"><option value="newest" @selected(request('sort', 'newest') === 'newest')>Newest</option><option value="oldest" @selected(request('sort') === 'oldest')>Oldest</option></select></div>
+<div class="col-6 col-md-auto"><button type="submit" class="btn btn-primary w-100">Apply</button></div>
+<div class="col-6 col-md-auto"><a class="btn btn-outline-secondary w-100 va-clear-filters" href="{{ route('expenses.index') }}">Clear</a></div>

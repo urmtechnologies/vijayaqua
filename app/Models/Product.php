@@ -16,11 +16,11 @@ class Product extends Model
 
     public function stockItems(): HasMany
     {
-        return $this->hasMany(StockEntryItem::class);
+        return $this->hasMany(StockEntryItem::class)->whereHas('entry');
     }
 
     public function soldItems(): HasMany
     {
-        return $this->hasMany(SaleItem::class);
+        return $this->hasMany(SaleItem::class)->whereHas('sale');
     }
 }

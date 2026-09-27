@@ -21492,3 +21492,16 @@ textarea.form-control-lg {
     display: none !important;
   }
 }
+table{
+    min-width: max-content;
+}
+
+
+.sidebar-slide.h-100 {
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.sidebar-slide.h-100::-webkit-scrollbar {
+    display: none;
+}

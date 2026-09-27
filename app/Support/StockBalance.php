@@ -9,12 +9,12 @@ final class StockBalance
 {
     public static function received(int $productId): int
     {
-        return (int) StockEntryItem::query()->where('product_id', $productId)->sum('cartons');
+        return (int) StockEntryItem::query()->where('product_id', $productId)->whereHas('entry')->sum('cartons');
     }
 
     public static function sold(int $productId): int
     {
-        return (int) SaleItem::query()->where('product_id', $productId)->sum('cartons');
+        return (int) SaleItem::query()->where('product_id', $productId)->whereHas('sale')->sum('cartons');
     }
 
     public static function available(int $productId): int

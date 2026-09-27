@@ -84,6 +84,10 @@
     animation: va-spin .75s linear infinite;
 }
 
+.va-confirm-dialog { border: 0; border-radius: 16px; box-shadow: 0 18px 50px rgba(20, 30, 50, .22); }
+.va-confirm-icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 17px; border-radius: 14px; background: #fff1f2; color: #dc3545; font-size: 28px; }
+.va-expense-note { max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 @keyframes va-spin {
     to { transform: rotate(360deg); }
 }
@@ -133,16 +137,4 @@
 @media (max-width: 767px) {
     .pagination { flex-wrap: wrap; }
     .va-nav-pending { padding: 11px 18px; }
-}
-
-
-#va-sidebar .sidebar-slide {
-    height: 100%;
-    overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Older Edge */
-}
-
-#va-sidebar .sidebar-slide::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Edge */
 }
