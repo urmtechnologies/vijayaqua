@@ -9,23 +9,24 @@
 <div class="table-responsive">
     <table class="table align-middle mb-0">
         <thead class="table-light"><tr>
-            <th>Entry</th><th>Date</th><th>Products</th><th>Total CTN</th><th>Added by</th><th class="text-end">Actions</th>
+            <th>Entry</th><th>Date</th><th>Type</th><th>Products</th><th>Total CTN</th><th>Added by</th><th class="text-end">Actions</th>
         </tr></thead>
         <tbody>
         @forelse($entries as $entry)
             <tr>
                 <td><strong>#{{ $entry->id }}</strong></td>
                 <td>{{ $entry->entry_date->format('d M Y') }}</td>
+                <td>{{ $entry->type ? ucfirst($entry->type) : 'Not set' }}</td>
                 <td>{{ $entry->items_count }}</td>
                 <td><strong>{{ \App\Support\CartonNumber::format($entry->carton_total) }}</strong> CTN</td>
-                <td>{{ $entry->creator?->name ?? 'System' }}</td>
+                <td>{{ $entry->creator?->name ?? 'System' }}@if($entry->updated_by)<br><small class="text-muted">Edited by {{ $entry->editor?->name ?? 'System' }}</small>@endif</td>
                 <td class="text-end text-nowrap">
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('stock-entries.show', $entry) }}">View</a>
                     <a class="btn btn-sm btn-outline-secondary" href="{{ route('stock-entries.edit', $entry) }}">Edit</a>
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6" class="text-center text-muted py-5">No stock entries found.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-5">No stock entries found.</td></tr>
         @endforelse
         </tbody>
     </table>

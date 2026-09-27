@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 form.elements[name].value = url.searchParams.get(name) || '';
             }
             form.elements.sort.value = url.searchParams.get('sort') || 'newest';
+            form.elements.type.value = url.searchParams.get('type') || '';
         }
     }
 
@@ -81,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(timer);
             apply(form);
         });
-        for (const name of ['sort', 'from', 'to']) {
+        for (const name of ['sort', 'type', 'from', 'to']) {
             form.elements[name].addEventListener('change', () => apply(form));
         }
         form.elements.search.addEventListener('input', () => {

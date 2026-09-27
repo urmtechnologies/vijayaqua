@@ -33,7 +33,7 @@ class AdminUsersTest extends TestCase
             ->get('/users?search=Alice')
             ->assertOk()
             ->assertSeeText('Alice')
-            ->assertDontSeeText('Admin');
+            ->assertDontSeeText('9999999999');
     }
 
     public function test_staff_cannot_log_in_or_access_admin_pages(): void
@@ -66,6 +66,7 @@ class AdminUsersTest extends TestCase
         $user->refresh();
         $this->assertSame('supervisor', $user->role);
         $this->assertSame('Alice Updated', $user->name);
+        $this->assertSame($admin->id, $user->updated_by);
         $this->assertTrue(Hash::check('OriginalPass123', $user->password));
     }
 

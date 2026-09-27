@@ -13,10 +13,12 @@
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h4 class="card-title mb-0">Entry Details</h4>
-        <span class="text-muted">{{ $entry->entry_date->format('d M Y') }}</span>
+        <span class="text-muted">{{ $entry->entry_date->format('d M Y') }} · {{ $entry->type ? ucfirst($entry->type) : 'Type not set' }}</span>
     </div>
     <div class="card-body">
-        <p class="text-muted mb-3">Added by <strong class="text-body">{{ $entry->creator?->name ?? 'System' }}</strong> · {{ $entry->created_at->format('d M Y, h:i A') }}</p>
+        <p class="text-muted mb-3">Added by <strong class="text-body">{{ $entry->creator?->name ?? 'System' }}</strong> · {{ $entry->created_at->format('d M Y, h:i A') }}
+            @if($entry->updated_by) · Updated by <strong class="text-body">{{ $entry->editor?->name ?? 'System' }}</strong> @endif
+        </p>
         <div class="table-responsive">
             <table class="table align-middle mb-0">
                 <thead class="table-light"><tr><th>Product</th><th class="text-end">Quantity (CTN)</th></tr></thead>

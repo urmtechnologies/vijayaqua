@@ -28,7 +28,7 @@ class StockEntriesTest extends TestCase
         $bottle = Product::create(['name' => 'Small Bottle', 'status' => 'active']);
 
         $this->post(route('stock-entries.store'), [
-            'entry_date' => '2026-09-27',
+            'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [
                 ['product_id' => $jar->id, 'cartons' => 2],
                 ['product_id' => $bottle->id, 'cartons' => 3],
@@ -63,7 +63,7 @@ class StockEntriesTest extends TestCase
         $entry->items()->create(['product_id' => $jar->id, 'cartons' => 4]);
 
         $this->put(route('stock-entries.update', $entry), [
-            'entry_date' => '2026-09-27',
+            'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [['product_id' => $bottle->id, 'cartons' => 8]],
         ])->assertRedirect(route('stock-entries.show', $entry));
 
@@ -83,7 +83,7 @@ class StockEntriesTest extends TestCase
         $entry->items()->create(['product_id' => $jar->id, 'cartons' => 4]);
 
         $this->post(route('stock-entries.store'), [
-            'entry_date' => '2026-09-27',
+            'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [
                 ['product_id' => $jar->id, 'cartons' => 1],
                 ['product_id' => $jar->id, 'cartons' => 2],
@@ -91,7 +91,7 @@ class StockEntriesTest extends TestCase
         ])->assertSessionHasErrors('items.1.product_id');
 
         $this->put(route('stock-entries.update', $entry), [
-            'entry_date' => '2026-09-27',
+            'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [['product_id' => $inactive->id, 'cartons' => 3]],
         ])->assertSessionHasErrors('items.0.product_id');
 
@@ -110,7 +110,7 @@ class StockEntriesTest extends TestCase
 
         $this->get(route('stock-entries.edit', $entry))->assertOk()->assertSee('20 Litre Jar');
         $this->put(route('stock-entries.update', $entry), [
-            'entry_date' => '2026-09-27',
+            'entry_date' => '2026-09-27', 'type' => 'manufacture',
             'items' => [['product_id' => $jar->id, 'cartons' => 6]],
         ])->assertRedirect(route('stock-entries.show', $entry));
 

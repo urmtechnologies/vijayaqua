@@ -12,11 +12,22 @@
 
     <div class="card mb-3">
         <div class="card-header"><h4 class="card-title mb-0">Entry Date</h4></div>
-        <div class="card-body">
-            <label for="entryDate" class="form-label">Date <span class="text-danger">*</span></label>
-            <input type="date" id="entryDate" name="entry_date" class="form-control @error('entry_date') is-invalid @enderror"
-                   value="{{ old('entry_date', $entry?->entry_date?->format('Y-m-d') ?? now()->toDateString()) }}" required>
-            @error('entry_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label for="entryDate" class="form-label">Date <span class="text-danger">*</span></label>
+                <input type="date" id="entryDate" name="entry_date" class="form-control @error('entry_date') is-invalid @enderror"
+                       value="{{ old('entry_date', $entry?->entry_date?->format('Y-m-d') ?? now()->toDateString()) }}" required>
+                @error('entry_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-6">
+                <label for="stockType" class="form-label">Type <span class="text-danger">*</span></label>
+                <select id="stockType" name="type" class="form-select @error('type') is-invalid @enderror" required>
+                    <option value="">Select type</option>
+                    <option value="manufacture" @selected(old('type', $entry?->type) === 'manufacture')>Manufacture</option>
+                    <option value="purchase" @selected(old('type', $entry?->type) === 'purchase')>Purchase</option>
+                </select>
+                @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
         </div>
     </div>
 

@@ -14,10 +14,21 @@
                     </a>
                 </li>
                 <li class="menu-title">Modules</li>
-                <li><span class="va-nav-pending"><i class="mdi mdi-cart-outline"></i>Sales <small>Coming soon</small></span></li>
+                <li class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'mm-active' : '' }}">
+                    <a href="#sales-submenu" class="has-arrow va-menu-toggle"
+                       aria-expanded="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'true' : 'false' }}"
+                       aria-controls="sales-submenu">
+                        <i class="mdi mdi-cart-outline"></i><span>Sales</span>
+                    </a>
+                    <ul id="sales-submenu" class="sub-menu mm-collapse {{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'mm-show' : '' }}">
+                        <li><a href="{{ route('sales.create') }}" class="{{ request()->routeIs('sales.create') ? 'active' : '' }}">Add Sale</a></li>
+                        <li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.index', 'sales.show', 'customers.show') ? 'active' : '' }}">Sales List</a></li>
+                        <li><a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'active' : '' }}">Payments</a></li>
+                    </ul>
+                </li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-calendar-check-outline"></i>Attendance <small>Coming soon</small></span></li>
                 <li class="{{ request()->routeIs('stock-entries.*') ? 'mm-active' : '' }}">
-                    <a href="#stock-submenu" class="has-arrow va-stock-menu-toggle"
+                    <a href="#stock-submenu" class="has-arrow va-menu-toggle"
                        aria-expanded="{{ request()->routeIs('stock-entries.*') ? 'true' : 'false' }}"
                        aria-controls="stock-submenu">
                         <i class="mdi mdi-package-variant-closed"></i><span>Stock Management</span>

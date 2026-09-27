@@ -57,6 +57,7 @@ class ProductSettingsTest extends TestCase
         ])->assertRedirect(route('products.index'));
         $this->assertSame('active', $product->fresh()->status);
         $this->assertSame($admin->id, $product->fresh()->user_id);
+        $this->assertSame($admin->id, $product->fresh()->updated_by);
 
         $this->actingAs($admin)->delete(route('products.destroy', $product))
             ->assertRedirect(route('products.index'));

@@ -6,7 +6,9 @@
         <tbody>
         @forelse($users as $user)
             <tr>
-                <td><span class="va-avatar">{{ strtoupper(mb_substr($user->name, 0, 1)) }}</span><strong>{{ $user->name }}</strong></td>
+                <td><span class="va-avatar">{{ strtoupper(mb_substr($user->name, 0, 1)) }}</span><strong>{{ $user->name }}</strong>
+                    <div class="text-muted small">Added by {{ $user->creator?->name ?? 'System' }}@if($user->updated_by) · Edited by {{ $user->editor?->name ?? 'System' }}@endif</div>
+                </td>
                 <td>{{ $user->mobile }}</td>
                 <td><span class="badge badge-label-primary">{{ ucfirst($user->role) }}</span></td>
                 <td>₹{{ number_format($user->salary, 2) }}</td>

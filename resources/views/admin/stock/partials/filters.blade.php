@@ -1,6 +1,14 @@
-<div class="col-12 col-md-3">
+<div class="col-12 col-md-2">
     <label class="form-label">Product</label>
     <input type="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search product..." maxlength="100">
+</div>
+<div class="col-12 col-md-2">
+    <label class="form-label">Type</label>
+    <select name="type" class="form-select">
+        <option value="">All types</option>
+        <option value="manufacture" @selected(request('type') === 'manufacture')>Manufacture</option>
+        <option value="purchase" @selected(request('type') === 'purchase')>Purchase</option>
+    </select>
 </div>
 <div class="col-6 col-md-2">
     <label class="form-label">From date</label>

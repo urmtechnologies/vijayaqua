@@ -20,7 +20,7 @@ class ProductController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = Product::query();
+        $query = Product::query()->with(['creator', 'editor']);
 
         if ($search = trim($filters['search'] ?? '')) {
             $query->where('name', 'like', '%'.$search.'%');

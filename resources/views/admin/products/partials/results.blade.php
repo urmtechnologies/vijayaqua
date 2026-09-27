@@ -6,7 +6,7 @@
         <tbody>
         @forelse($products as $product)
             <tr>
-                <td><strong>{{ $product->name }}</strong></td>
+                <td><strong>{{ $product->name }}</strong><div class="text-muted small">Added by {{ $product->creator?->name ?? 'System' }}@if($product->updated_by) · Edited by {{ $product->editor?->name ?? 'System' }}@endif</div></td>
                 <td><span class="badge {{ $product->status === 'active' ? 'bg-success' : 'bg-secondary' }}">{{ ucfirst($product->status) }}</span></td>
                 <td class="text-end">
                     <button type="button" class="btn btn-sm btn-outline-primary" data-edit-product

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
+use App\Support\StockBalance;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class StockEntryController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', Rule::in(['manufacture', 'purchase'])],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'sort' => ['nullable', Rule::in(['newest', 'oldest'])],
@@ -32,11 +34,14 @@ class StockEntryController extends Controller
                 $product->withTrashed()->where('name', 'like', '%'.$search.'%');
             });
         }
+        if ($type = $filters['type'] ?? null) {
+            $query->where('type', $type);
+        }
         if ($from = $filters['from'] ?? null) {
-            $query->where('entry_date', '>=', $from);
+            $query->whereDate('entry_date', '>=', $from);
         }
         if ($to = $filters['to'] ?? null) {
-            $query->where('entry_date', '<=', $to);
+            $query->whereDate('entry_date', '<=', $to);
         }
 
         $summary = [
@@ -46,7 +51,7 @@ class StockEntryController extends Controller
                 ->sum('cartons'),
         ];
 
-        $query->with('creator')->withCount('items')->withSum('items as carton_total', 'cartons');
+        $query->with(['creator', 'editor'])->withCount('items')->withSum('items as carton_total', 'cartons');
         if (($filters['sort'] ?? 'newest') === 'oldest') {
             $query->orderBy('entry_date')->orderBy('id');
         } else {
@@ -72,7 +77,7 @@ class StockEntryController extends Controller
         $data = $this->validated($request);
 
         DB::transaction(function () use ($data): void {
-            $entry = StockEntry::create(['entry_date' => $data['entry_date']]);
+            $entry = StockEntry::create(['entry_date' => $data['entry_date'], 'type' => $data['type']]);
             $entry->items()->createMany($data['items']);
         });
 
@@ -81,7 +86,7 @@ class StockEntryController extends Controller
 
     public function show(StockEntry $stockEntry): View
     {
-        $stockEntry->load(['creator', 'items.product']);
+        $stockEntry->load(['creator', 'editor', 'items.product']);
 
         return view('admin.stock.show', ['entry' => $stockEntry]);
     }
@@ -102,9 +107,24 @@ class StockEntryController extends Controller
 
         DB::transaction(function () use ($stockEntry, $data): void {
             $entry = StockEntry::query()->lockForUpdate()->findOrFail($stockEntry->id);
-            $entry->update(['entry_date' => $data['entry_date']]);
+            $old = $entry->items()->pluck('cartons', 'product_id');
+            $new = collect($data['items'])->pluck('cartons', 'product_id');
+            $productIds = $old->keys()->merge($new->keys())->unique()->sort()->values();
+            Product::withTrashed()->whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get();
+
+            foreach ($productIds as $productId) {
+                $receivedAfterEdit = StockBalance::received((int) $productId)
+                    - (int) $old->get($productId, 0) + (int) $new->get($productId, 0);
+                if ($receivedAfterEdit < StockBalance::sold((int) $productId)) {
+                    throw ValidationException::withMessages([
+                        'items' => 'This edit would reduce stock below cartons already sold.',
+                    ]);
+                }
+            }
+            $entry->update(['entry_date' => $data['entry_date'], 'type' => $data['type']]);
             $entry->items()->delete();
             $entry->items()->createMany($data['items']);
+            $entry->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
         });
 
         return redirect()->route('stock-entries.show', $stockEntry)->with('success', 'Stock entry updated successfully.');
@@ -114,6 +134,7 @@ class StockEntryController extends Controller
     {
         $data = $request->validate([
             'entry_date' => ['required', 'date_format:Y-m-d'],
+            'type' => ['required', Rule::in(['manufacture', 'purchase'])],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')],
             'items.*.cartons' => ['required', 'integer', 'min:1', 'max:1000000000'],

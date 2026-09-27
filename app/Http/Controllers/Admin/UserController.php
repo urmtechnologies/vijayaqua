@@ -22,7 +22,7 @@ class UserController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = User::query()->where('role', '!=', 'admin');
+        $query = User::query()->where('role', '!=', 'admin')->with(['creator', 'editor']);
 
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(function ($q) use ($search): void {
@@ -129,9 +129,7 @@ class UserController extends Controller
 
     private function normalizeRole(mixed $role): string
     {
-        if (! is_string($role)) {
-            return '';
-        }
+        if (! is_string($role)) return '';
 
         return strtolower(trim(preg_replace('/\s+/', '-', trim($role)), '-'));
     }
