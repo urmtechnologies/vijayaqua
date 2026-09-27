@@ -16,9 +16,31 @@
                 <li class="menu-title">Modules</li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-cart-outline"></i>Sales <small>Coming soon</small></span></li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-calendar-check-outline"></i>Attendance <small>Coming soon</small></span></li>
-                <li><span class="va-nav-pending"><i class="mdi mdi-package-variant-closed"></i>Stock Management <small>Coming soon</small></span></li>
+                <li class="{{ request()->routeIs('stock-entries.*') ? 'mm-active' : '' }}">
+                    <a href="#stock-submenu" class="has-arrow va-stock-menu-toggle"
+                       aria-expanded="{{ request()->routeIs('stock-entries.*') ? 'true' : 'false' }}"
+                       aria-controls="stock-submenu">
+                        <i class="mdi mdi-package-variant-closed"></i><span>Stock Management</span>
+                    </a>
+                    <ul id="stock-submenu" class="sub-menu mm-collapse {{ request()->routeIs('stock-entries.*') ? 'mm-show' : '' }}">
+                        <li>
+                            <a href="{{ route('stock-entries.create') }}" class="{{ request()->routeIs('stock-entries.create') ? 'active' : '' }}"
+                               @if(request()->routeIs('stock-entries.create')) aria-current="page" @endif>Add Stock Entry</a>
+                        </li>
+                        <li>
+                            <a href="{{ route('stock-entries.index') }}" class="{{ request()->routeIs('stock-entries.index', 'stock-entries.show', 'stock-entries.edit') ? 'active' : '' }}"
+                               @if(request()->routeIs('stock-entries.index', 'stock-entries.show', 'stock-entries.edit')) aria-current="page" @endif>Stock List</a>
+                        </li>
+                    </ul>
+                </li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-cash-minus"></i>Expenses <small>Coming soon</small></span></li>
                 <li><span class="va-nav-pending"><i class="mdi mdi-wallet-outline"></i>Salary <small>Coming soon</small></span></li>
+                <li class="menu-title">Settings</li>
+                <li>
+                    <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'active' : '' }}">
+                        <i class="mdi mdi-package-variant"></i><span>Products Setting</span>
+                    </a>
+                </li>
             </ul>
         </div>
     </div>

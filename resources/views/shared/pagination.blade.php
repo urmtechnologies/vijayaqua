@@ -1,5 +1,5 @@
 @if($paginator->hasPages())
-<nav class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" aria-label="Users pagination">
+<nav class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4" aria-label="{{ $label ?? 'Users pagination' }}">
     <small class="text-muted">Showing {{ $paginator->firstItem() }}–{{ $paginator->lastItem() }} of {{ $paginator->total() }}</small>
     <ul class="pagination mb-0">
         <li class="page-item {{ $paginator->onFirstPage() ? 'disabled' : '' }}">

@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, {
                 signal: controller.signal,
-                headers: {'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html'},
+                headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' },
                 credentials: 'same-origin',
             });
             if (response.status === 401 || response.redirected) { window.location.assign(response.url); return; }

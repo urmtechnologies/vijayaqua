@@ -1,0 +1,80 @@
+.va-stock-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 17px 20px;
+    border: 1px solid #e8eaf1;
+    border-radius: 12px;
+    background: #f8f9fc;
+}
+
+.va-stock-metric small { color: #6e7789; }
+.va-stock-metric strong { font-size: 23px; line-height: 1.1; }
+
+.va-stock-row {
+    display: grid;
+    grid-template-columns: 32px minmax(220px, 1fr) minmax(140px, 180px) 42px;
+    gap: 13px;
+    align-items: end;
+    padding: 16px;
+    border: 1px solid #e8eaf1;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.va-stock-row-number {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 38px;
+    color: #697487;
+    font-weight: 700;
+}
+
+.va-stock-product, .va-stock-picker { min-width: 0; }
+.va-stock-picker { position: relative; }
+.va-stock-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    max-height: 210px;
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid #dde1eb;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(22, 30, 52, .14);
+}
+
+.va-stock-options[hidden] { display: none; }
+.va-stock-option {
+    display: block;
+    width: 100%;
+    padding: 9px 11px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.va-stock-option:hover, .va-stock-option.is-active {
+    background: rgba(158, 109, 202, .12);
+    color: var(--bs-primary);
+}
+
+.va-stock-empty { padding: 9px 11px; color: #697487; }
+.va-stock-remove { height: 38px; }
+.va-stock-form-total { display: flex; align-items: baseline; gap: 10px; }
+.va-stock-form-total strong { font-size: 20px; }
+
+@media (max-width: 700px) {
+    .va-stock-row { grid-template-columns: 28px minmax(0, 1fr) 42px; }
+    .va-stock-product { grid-column: 2 / 4; }
+    .va-stock-cartons { grid-column: 2 / 3; }
+    .va-stock-remove { grid-column: 3 / 4; }
+    .va-stock-row-number { grid-row: 1 / 3; align-self: start; }
+}

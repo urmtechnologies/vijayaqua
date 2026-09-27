@@ -9,4 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     button.addEventListener('click', toggle);
     backdrop?.addEventListener('click', () => document.body.classList.remove('sidebar-enable'));
+
+    const stockToggle = sidebar.querySelector('.va-stock-menu-toggle');
+    const stockMenu = document.getElementById('stock-submenu');
+    stockToggle?.addEventListener('click', event => {
+        event.preventDefault();
+        const open = stockToggle.getAttribute('aria-expanded') !== 'true';
+        stockToggle.setAttribute('aria-expanded', String(open));
+        stockMenu.classList.toggle('mm-show', open);
+        stockToggle.parentElement.classList.toggle('mm-active', open);
+    });
 });

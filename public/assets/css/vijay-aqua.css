@@ -134,3 +134,15 @@
     .pagination { flex-wrap: wrap; }
     .va-nav-pending { padding: 11px 18px; }
 }
+
+
+#va-sidebar .sidebar-slide {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Older Edge */
+}
+
+#va-sidebar .sidebar-slide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
