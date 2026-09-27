@@ -14,15 +14,9 @@ class Usercontroller extends Controller
 {
     public function login(): View|RedirectResponse
     {
-        if (Auth::check()) {
-            return redirect()->route(
-                Auth::user()->role === 'admin'
-                    ? 'admin.dashboard'
-                    : 'user.dashboard'
-            );
-        }
-
-        return view('auth.login');
+        return Auth::check() && Auth::user()->role === 'admin'
+            ? redirect()->route('dashboard')
+            : view('auth.login');
     }
 
     public function authenticate(Request $request): JsonResponse
@@ -32,57 +26,34 @@ class Usercontroller extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $rateKey = 'login:'.sha1($data['mobile'].'|'.$request->ip());
+        $key = 'admin-login:'.sha1($data['mobile'].'|'.$request->ip());
 
-        if (RateLimiter::tooManyAttempts($rateKey, 5)) {
+        if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json([
-                'message' => 'Too many login attempts. Try again in '
-                    .RateLimiter::availableIn($rateKey).' seconds.',
+                'message' => 'Too many attempts. Try again in '.RateLimiter::availableIn($key).' seconds.',
             ], 429);
         }
 
+        // Staff accounts are created now; their login is intentionally disabled.
         if (! Auth::attempt([
             'mobile' => $data['mobile'],
             'password' => $data['password'],
+            'role' => 'admin',
         ])) {
-            RateLimiter::hit($rateKey, 60);
+            RateLimiter::hit($key, 60);
 
-            return response()->json([
-                'message' => 'Mobile number or password is incorrect.',
-            ], 422);
+            return response()->json(['message' => 'Mobile number or password is incorrect.'], 422);
         }
 
-        RateLimiter::clear($rateKey);
+        RateLimiter::clear($key);
         $request->session()->regenerate();
 
-        return response()->json([
-            'message' => 'Login successful.',
-            'redirect' => route(
-                Auth::user()->role === 'admin'
-                    ? 'admin.dashboard'
-                    : 'user.dashboard'
-            ),
-        ]);
-    }
-
-    public function adminDashboard(): View
-    {
-        return view('dashboard', [
-            'heading' => 'Admin Dashboard',
-        ]);
-    }
-
-    public function userDashboard(): View
-    {
-        return view('dashboard', [
-            'heading' => 'User Dashboard',
-        ]);
+        return response()->json(['redirect' => route('dashboard')]);
     }
 
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

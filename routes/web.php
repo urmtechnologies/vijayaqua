@@ -1,34 +1,17 @@
 <?php
 
-use App\Http\Controllers\Auth\Usercontroller;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\Usercontroller as LoginController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    if (! auth()->check()) {
-        return redirect()->route('login');
-    }
+Route::redirect('/', '/dashboard');
+Route::get('/login', [LoginController::class, 'login'])->name('login');
+Route::post('/login', [LoginController::class, 'authenticate'])->name('login.submit');
 
-    return redirect()->route(
-        auth()->user()->role === 'admin'
-            ? 'admin.dashboard'
-            : 'user.dashboard'
-    );
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::resource('users', UserController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
+    Route::get('/users/new', [UserController::class, 'create'])->name('users.create');
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });
-
-Route::get('/login', [Usercontroller::class, 'login'])
-    ->name('login');
-
-Route::post('/login', [Usercontroller::class, 'authenticate'])
-    ->name('login.submit');
-
-Route::middleware('login.check')->group(function () {
-    Route::post('/logout', [Usercontroller::class, 'logout'])->name('logout');
-});
-
-Route::get('/dashboard', [Usercontroller::class, 'userDashboard'])
-    ->middleware('login.check:user')
-    ->name('user.dashboard');
-
-Route::get('/admin/dashboard', [Usercontroller::class, 'adminDashboard'])
-    ->middleware('login.check:admin')
-    ->name('admin.dashboard');

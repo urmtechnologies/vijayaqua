@@ -1,0 +1,136 @@
+.va-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-left: 20px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--bs-primary);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.va-brand span { font-size: 17px; }
+.va-brand:hover { color: var(--bs-primary); }
+
+.va-nav-pending {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 22px;
+    color: #8290a0;
+    cursor: default;
+}
+
+.va-nav-pending i { font-size: 20px; }
+.va-nav-pending small {
+    margin-left: auto;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: .7;
+}
+
+#side-menu a.active {
+    color: var(--bs-primary);
+    background: rgba(158, 109, 202, .1);
+    font-weight: 700;
+}
+
+.va-stat-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 15px;
+    background: rgba(158, 109, 202, .12);
+    color: var(--bs-primary);
+    font-size: 26px;
+}
+
+.va-avatar {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: rgba(158, 109, 202, .12);
+    color: var(--bs-primary);
+    font-weight: 700;
+}
+
+.va-results {
+    position: relative;
+    min-height: 120px;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.va-results.is-loading {
+    opacity: .5;
+    transform: translateY(4px);
+    pointer-events: none;
+}
+
+.va-results.is-loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 48px;
+    width: 25px;
+    height: 25px;
+    border: 3px solid rgba(158, 109, 202, .22);
+    border-top-color: var(--bs-primary);
+    border-radius: 50%;
+    animation: va-spin .75s linear infinite;
+}
+
+@keyframes va-spin {
+    to { transform: rotate(360deg); }
+}
+
+.va-password-field { position: relative; }
+.va-password-field .form-control { padding-right: 48px; }
+
+.va-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    transform: translateY(-50%);
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #78889b;
+    cursor: pointer;
+}
+
+.va-password-toggle:hover,
+.va-password-toggle:focus-visible {
+    color: var(--bs-primary);
+    background: rgba(158, 109, 202, .09);
+}
+
+.va-password-toggle svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@media (max-width: 1199px) {
+    .va-brand { padding-left: 14px; }
+    .va-brand span { font-size: 15px; }
+}
+
+@media (max-width: 767px) {
+    .pagination { flex-wrap: wrap; }
+    .va-nav-pending { padding: 11px 18px; }
+}
