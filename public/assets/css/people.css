@@ -1,0 +1,13 @@
+.va-calendar-scroll { max-width: 100%; overflow-x: auto; }
+.va-calendar { min-width: 1350px; font-size: .82rem; }
+.va-calendar th, .va-calendar td { min-width: 38px; padding: .55rem .25rem; }
+.va-calendar .va-calendar-name { min-width: 150px; position: sticky; left: 0; z-index: 1; background: #fff; }
+.va-calendar thead .va-calendar-name { background: #f8f9fa; z-index: 2; }
+.va-calendar-pending { background: #fff3cd !important; }
+.va-calendar a { font-weight: 700; text-decoration: underline; }
+.va-people-metric { display: flex; flex-direction: column; gap: .4rem; padding: 1rem; border: 1px solid #e5eaf0; border-radius: .75rem; height: 100%; background: #f8fafc; }
+.va-people-metric small { color: #667085; }
+.va-people-metric strong { font-size: 1.15rem; color: #183b56; }
+.va-salary-days { max-height: 550px; overflow-y: auto; }
+.va-permissions-table th, .va-permissions-table td { white-space: nowrap; }
+@media (max-width: 767px) { .va-people-metric { padding: .7rem; } .va-people-metric strong { font-size: 1rem; } }

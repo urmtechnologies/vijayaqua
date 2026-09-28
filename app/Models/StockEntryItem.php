@@ -16,7 +16,7 @@ class StockEntryItem extends Model
 
     public function entry(): BelongsTo
     {
-        return $this->belongsTo(StockEntry::class, 'stock_entry_id');
+        return $this->belongsTo(StockEntry::class, 'stock_entry_id')->where('approval_status', 'approved');
     }
 
     public function product(): BelongsTo

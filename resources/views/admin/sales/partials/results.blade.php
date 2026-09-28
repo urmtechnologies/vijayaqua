@@ -1,7 +1,7 @@
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Invoices</small><strong>{{ \App\Support\CartonNumber::format($summary['invoices']) }}</strong></div></div>
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Total billed</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['total']) }}</strong></div></div>
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Received</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['paid']) }}</strong></div></div>
+    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Approved billed</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['total']) }}</strong></div></div>
+    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Approved received</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['paid']) }}</strong></div></div>
     <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Due</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['due']) }}</strong></div></div>
 </div>
 <div class="table-responsive">
@@ -11,19 +11,19 @@
         @forelse($sales as $sale)
             @php $due = (int) $sale->total_rupees - (int) ($sale->paid_total ?? 0); @endphp
             <tr>
-                <td><strong>{{ $sale->invoice_no }}</strong></td>
+                <td><strong>{{ $sale->invoice_no }}</strong> @include('shared.approval-status', ['record' => $sale])</td>
                 <td><a href="{{ route('customers.show', $sale->customer) }}">{{ $sale->customer->name }}</a><br><small class="text-muted">{{ $sale->customer->mobile }}</small></td>
                 <td>{{ $sale->sale_date->format('d M Y') }}</td>
                 <td>₹{{ \App\Support\RupeeAmount::format($sale->total_rupees) }}</td>
                 <td><span class="badge {{ $due > 0 ? 'bg-warning text-dark' : 'bg-success' }}">{{ $due > 0 ? '₹'.\App\Support\RupeeAmount::format($due) : 'Paid' }}</span></td>
                 <td>{{ $sale->creator?->name ?? 'System' }}@if($sale->updated_by)<br><small class="text-muted">Edited by {{ $sale->editor?->name ?? 'System' }}</small>@endif</td>
                 <td class="text-end text-nowrap">
-                    <a class="btn btn-sm btn-outline-primary" href="{{ route('sales.show', $sale) }}">Invoice</a>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('sales.edit', $sale) }}">Edit</a>
+                    @if(\App\Support\Access::allowed('sales', 'invoice'))<a class="btn btn-sm btn-outline-primary" href="{{ route('sales.show', $sale) }}">Invoice</a>@endif
+                    @if(\App\Support\Access::canEdit('sales', $sale))<a class="btn btn-sm btn-outline-secondary" href="{{ route('sales.edit', $sale) }}">Edit</a>@endif
                     @if((int) ($sale->paid_total ?? 0) === 0)
-                        <form method="POST" action="{{ route('sales.destroy', $sale) }}" class="d-inline">@csrf @method('DELETE')
+                        @if(\App\Support\Access::canDelete('sales', $sale))<form method="POST" action="{{ route('sales.destroy', $sale) }}" class="d-inline">@csrf @method('DELETE')
                             <button type="button" class="btn btn-sm btn-outline-danger" data-va-delete data-va-delete-name="{{ $sale->invoice_no }}">Delete</button>
-                        </form>
+                        </form>@endif
                     @endif
                 </td>
             </tr>

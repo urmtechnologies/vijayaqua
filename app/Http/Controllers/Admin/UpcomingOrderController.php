@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\UpcomingOrder;
@@ -23,9 +24,11 @@ class UpcomingOrderController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'sort' => ['nullable', Rule::in(['soonest', 'latest'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
-        $query = UpcomingOrder::query();
+        $query = Access::scope(UpcomingOrder::query(), 'upcoming-orders');
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(function ($q) use ($search): void {
                 $q->whereHas('customer', function ($customer) use ($search): void {
@@ -42,7 +45,7 @@ class UpcomingOrderController extends Controller
             'cartons' => (string) UpcomingOrderItem::query()
                 ->whereIn('upcoming_order_id', (clone $query)->select('upcoming_orders.id'))->sum('cartons'),
         ];
-        $query->with(['customer', 'creator', 'editor'])->withCount('items')->withSum('items as carton_total', 'cartons');
+        $query->with(['customer', 'creator', 'editor', 'approver'])->withCount('items')->withSum('items as carton_total', 'cartons');
         if (($filters['sort'] ?? 'soonest') === 'latest') $query->orderByDesc('scheduled_date')->orderByDesc('id');
         else $query->orderBy('scheduled_date')->orderBy('id');
         $orders = $query->paginate(10)->withQueryString();
@@ -55,11 +58,14 @@ class UpcomingOrderController extends Controller
     public function create(Request $request): View
     {
         $mobile = $request->query('mobile');
+        $customer = is_string($mobile) && preg_match('/^[0-9]{10}$/', $mobile)
+            ? Customer::where('mobile', $mobile)->first() : null;
+        if ($customer && ! Access::all('upcoming-orders')
+            && ! $customer->upcomingOrders()->where('user_id', auth()->id())->exists()) $customer = null;
 
         return view('admin.upcoming-orders.create', [
             'order' => null,
-            'customer' => is_string($mobile) && preg_match('/^[0-9]{10}$/', $mobile)
-                ? Customer::where('mobile', $mobile)->first() : null,
+            'customer' => $customer,
             'products' => Product::where('status', 'active')->orderBy('name')->get(['id', 'name', 'status', 'deleted_at']),
         ]);
     }
@@ -87,7 +93,7 @@ class UpcomingOrderController extends Controller
 
     public function show(UpcomingOrder $upcomingOrder): View
     {
-        $upcomingOrder->load(['customer', 'creator', 'editor', 'items']);
+        $upcomingOrder->load(['customer', 'creator', 'editor', 'approver', 'items']);
 
         return view('admin.upcoming-orders.show', ['order' => $upcomingOrder]);
     }
@@ -100,7 +106,7 @@ class UpcomingOrderController extends Controller
         return view('admin.upcoming-orders.edit', [
             'order' => $upcomingOrder, 'customer' => $upcomingOrder->customer,
             'products' => Product::withTrashed()->where(function ($q) use ($ids): void {
-                $q->where(fn ($active) => $active->where('status', 'active')->whereNull('deleted_at'))
+                $q->where(fn ($active) => $active->where('status', 'active')->where('approval_status', 'approved')->where('approval_status', 'approved')->whereNull('deleted_at'))
                     ->orWhereIn('id', $ids);
             })->orderBy('name')->get(['id', 'name', 'status', 'deleted_at']),
         ]);
@@ -111,6 +117,7 @@ class UpcomingOrderController extends Controller
         $data = $this->validated($request);
         DB::transaction(function () use ($upcomingOrder, $data): void {
             $order = UpcomingOrder::whereKey($upcomingOrder->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canEdit('upcoming-orders', $order), 403);
             $oldIds = $order->items()->pluck('product_id')->map(fn ($id) => (int) $id)->all();
             $lines = $this->lines($data['items'], $oldIds);
             $customer = Customer::createOrFirst(
@@ -130,7 +137,11 @@ class UpcomingOrderController extends Controller
 
     public function destroy(UpcomingOrder $upcomingOrder): RedirectResponse
     {
-        $upcomingOrder->delete();
+        DB::transaction(function () use ($upcomingOrder): void {
+            $record = UpcomingOrder::whereKey($upcomingOrder->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canDelete('upcoming-orders', $record), 403);
+            $record->delete();
+        }, 3);
 
         return redirect()->route('upcoming-orders.index')->with('success', 'Upcoming order removed.');
     }
@@ -155,7 +166,7 @@ class UpcomingOrderController extends Controller
         $lines = [];
         foreach ($items as $index => $item) {
             $product = $products->get($item['product_id']);
-            if (! $product || (($product->status !== 'active' || $product->trashed())
+            if (! $product || (($product->status !== 'active' || $product->approval_status !== 'approved' || $product->trashed())
                 && ! in_array($product->id, $existingIds, true))) {
                 throw ValidationException::withMessages(["items.$index.product_id" => 'Select an active product.']);
             }

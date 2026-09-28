@@ -6,16 +6,16 @@
         <tbody>
         @forelse($products as $product)
             <tr>
-                <td><strong>{{ $product->name }}</strong><div class="text-muted small">Added by {{ $product->creator?->name ?? 'System' }}@if($product->updated_by) · Edited by {{ $product->editor?->name ?? 'System' }}@endif</div></td>
+                <td><strong>{{ $product->name }}</strong> @include('shared.approval-status', ['record' => $product])<div class="text-muted small">Added by {{ $product->creator?->name ?? 'System' }}@if($product->updated_by) · Edited by {{ $product->editor?->name ?? 'System' }}@endif</div></td>
                 <td><span class="badge {{ $product->status === 'active' ? 'bg-success' : 'bg-secondary' }}">{{ ucfirst($product->status) }}</span></td>
                 <td class="text-end">
-                    <button type="button" class="btn btn-sm btn-outline-primary" data-edit-product
+                    @if(\App\Support\Access::canEdit('products', $product))<button type="button" class="btn btn-sm btn-outline-primary" data-edit-product
                             data-product-id="{{ $product->id }}" data-product-name="{{ $product->name }}"
                             data-product-status="{{ $product->status }}" data-update-url="{{ route('products.update', $product) }}"
-                            aria-label="Edit {{ $product->name }}">Edit</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" data-delete-product
+                            aria-label="Edit {{ $product->name }}">Edit</button>@endif
+                    @if(\App\Support\Access::canDelete('products', $product))<button type="button" class="btn btn-sm btn-outline-danger" data-delete-product
                             data-product-name="{{ $product->name }}" data-delete-url="{{ route('products.destroy', $product) }}"
-                            aria-label="Delete {{ $product->name }}">Delete</button>
+                            aria-label="Delete {{ $product->name }}">Delete</button>@endif
                 </td>
             </tr>
         @empty

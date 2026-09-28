@@ -36,7 +36,16 @@
         </div>
         <div class="card-body">
             @if($errors->has('items'))<div class="alert alert-danger" role="alert">{{ $errors->first('items') }}</div>@endif
-            @if($products->isEmpty())<div class="alert alert-info">Create an active product in <a href="{{ route('products.index') }}">Products Setting</a> first.</div>@endif
+            @if($products->isEmpty())
+                <div class="alert alert-info">
+                    No active product is available.
+                    @if(\App\Support\Access::allowed('products'))
+                        <a href="{{ route('products.index') }}">Open Products Setting</a>.
+                    @else
+                        Ask an administrator to add one.
+                    @endif
+                </div>
+            @endif
             <div id="upcomingRows" class="d-grid gap-3">
                 @foreach($rows as $index => $row)
                     @php $selected = $products->firstWhere('id', (int) ($row['product_id'] ?? 0)); @endphp

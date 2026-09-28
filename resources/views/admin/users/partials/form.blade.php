@@ -66,6 +66,34 @@
         </div>
     </div>
 
+    @if(auth()->user()->role === 'admin')
+        <section class="mt-4" aria-label="User permissions">
+            <h5>Access and permissions</h5>
+            <p class="text-muted small">Select actions for each module. Self shows only records added by this user. Admin accounts always have full access.</p>
+            @php $existingPermissions = $user?->permissions->keyBy('module') ?? collect(); @endphp
+            <div class="table-responsive"><table class="table table-sm align-middle va-permissions-table">
+                <thead class="table-light"><tr><th>Module</th><th>View</th><th>Add</th><th>Edit</th><th>Delete</th><th>Invoice</th><th>Records</th></tr></thead>
+                <tbody>
+                @foreach($modules as $key => $label)
+                    @php $saved = $existingPermissions->get($key); @endphp
+                    <tr><th scope="row">{{ $label }}</th>
+                        @foreach(['view', 'create', 'edit', 'delete'] as $action)
+                            <td><input class="form-check-input" type="checkbox" name="permissions[{{ $key }}][{{ $action }}]" value="1" @disabled(in_array($key, ['stock', 'salaries'], true) && $action !== 'view')
+                                aria-label="{{ ucfirst($action) }} {{ $label }}"
+                                @checked(old("permissions.$key.$action", $saved?->{'can_'.$action} ?? false))></td>
+                        @endforeach
+                        <td>@if($key === 'sales')<input class="form-check-input" type="checkbox" name="permissions[sales][invoice]" value="1" aria-label="View sale invoices" @checked(old('permissions.sales.invoice', $saved?->can_invoice ?? false))>@else — @endif</td>
+                        <td><select name="permissions[{{ $key }}][scope]" class="form-select form-select-sm" aria-label="{{ $label }} record scope">
+                            <option value="self" @selected(old("permissions.$key.scope", $saved?->scope ?? 'self') === 'self')>Own</option>
+                            <option value="all" @selected(old("permissions.$key.scope", $saved?->scope ?? 'self') === 'all')>All</option>
+                        </select></td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table></div>
+        </section>
+    @endif
+
     <div class="d-flex gap-2 mt-4">
         <button type="submit" class="btn btn-primary" id="saveUser">{{ $user ? 'Save Changes' : 'Create User' }}</button>
         <a href="{{ route('users.index') }}" class="btn btn-light">Cancel</a>

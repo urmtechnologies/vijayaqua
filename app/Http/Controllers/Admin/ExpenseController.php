@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Support\RupeeAmount;
@@ -23,9 +24,11 @@ class ExpenseController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'sort' => ['nullable', Rule::in(['newest', 'oldest'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
-        $query = Expense::query();
+        $query = Access::scope(Expense::query(), 'expenses');
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(fn ($q) => $q->where('title', 'like', '%'.$search.'%')->orWhere('notes', 'like', '%'.$search.'%'));
         }
@@ -33,8 +36,8 @@ class ExpenseController extends Controller
         if ($from = $filters['from'] ?? null) $query->whereDate('expense_date', '>=', $from);
         if ($to = $filters['to'] ?? null) $query->whereDate('expense_date', '<=', $to);
 
-        $summary = ['count' => (clone $query)->count(), 'amount' => (string) (clone $query)->sum('amount_rupees')];
-        $query->with(['category', 'creator', 'editor']);
+        $summary = ['count' => (clone $query)->count(), 'amount' => (string) (clone $query)->where('approval_status', 'approved')->sum('amount_rupees')];
+        $query->with(['category', 'creator', 'editor', 'approver']);
         if (($filters['sort'] ?? 'newest') === 'oldest') $query->orderBy('expense_date')->orderBy('id');
         else $query->orderByDesc('expense_date')->orderByDesc('id');
         $expenses = $query->paginate(10)->withQueryString();
@@ -79,6 +82,8 @@ class ExpenseController extends Controller
     {
         $data = $this->validated($request);
         DB::transaction(function () use ($expense, $data): void {
+            $expense = Expense::whereKey($expense->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canEdit('expenses', $expense), 403);
             $category = $this->category($data['category_name']);
             $expense->update([
                 'expense_date' => $data['expense_date'], 'title' => trim($data['title']),
@@ -94,7 +99,11 @@ class ExpenseController extends Controller
 
     public function destroy(Expense $expense): RedirectResponse
     {
-        $expense->delete();
+        DB::transaction(function () use ($expense): void {
+            $record = Expense::whereKey($expense->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canDelete('expenses', $record), 403);
+            $record->delete();
+        }, 3);
 
         return redirect()->route('expenses.index')->with('success', 'Expense removed.');
     }

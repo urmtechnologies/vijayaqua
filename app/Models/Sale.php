@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RequiresApproval;
 use App\Models\Concerns\TracksCreator;
 use App\Models\Concerns\TracksEditor;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
-    use SoftDeletes, TracksCreator, TracksEditor;
+    use SoftDeletes, TracksCreator, TracksEditor, RequiresApproval;
 
     protected $fillable = [
         'customer_id', 'sale_date', 'subtotal_rupees', 'discount_rupees',

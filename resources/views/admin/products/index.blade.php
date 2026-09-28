@@ -3,7 +3,7 @@
 @section('title', 'Products Setting')
 @section('page-title', 'Products Setting')
 @section('page-action')
-    <button type="button" class="btn btn-primary" id="newProduct"><i class="mdi mdi-plus me-1"></i> New Product</button>
+    @if(\App\Support\Access::allowed('products', 'create'))<button type="button" class="btn btn-primary" id="newProduct"><i class="mdi mdi-plus me-1"></i> New Product</button>@endif
 @endsection
 
 @section('content')

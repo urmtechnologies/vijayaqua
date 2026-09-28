@@ -14,7 +14,7 @@
         <tbody>
         @forelse($entries as $entry)
             <tr>
-                <td><strong>#{{ $entry->id }}</strong></td>
+                <td><strong>#{{ $entry->id }}</strong> @include('shared.approval-status', ['record' => $entry])</td>
                 <td>{{ $entry->entry_date->format('d M Y') }}</td>
                 <td>{{ $entry->items->pluck('type')->filter()->unique()->map(fn ($type) => ucfirst($type))->join(', ') ?: 'Not set' }}</td>
                 <td>{{ $entry->items_count }}</td>
@@ -22,10 +22,10 @@
                 <td>{{ $entry->creator?->name ?? 'System' }}@if($entry->updated_by)<br><small class="text-muted">Edited by {{ $entry->editor?->name ?? 'System' }}</small>@endif</td>
                 <td class="text-end text-nowrap">
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('stock-entries.show', $entry) }}">View</a>
-                    <a class="btn btn-sm btn-outline-secondary" href="{{ route('stock-entries.edit', $entry) }}">Edit</a>
-                    <form method="POST" action="{{ route('stock-entries.destroy', $entry) }}" class="d-inline">@csrf @method('DELETE')
+                    @if(\App\Support\Access::canEdit('stock-entries', $entry))<a class="btn btn-sm btn-outline-secondary" href="{{ route('stock-entries.edit', $entry) }}">Edit</a>@endif
+                    @if(\App\Support\Access::canDelete('stock-entries', $entry))<form method="POST" action="{{ route('stock-entries.destroy', $entry) }}" class="d-inline">@csrf @method('DELETE')
                         <button type="button" class="btn btn-sm btn-outline-danger" data-va-delete data-va-delete-name="Stock Entry #{{ $entry->id }}">Delete</button>
-                    </form>
+                    </form>@endif
                 </td>
             </tr>
         @empty

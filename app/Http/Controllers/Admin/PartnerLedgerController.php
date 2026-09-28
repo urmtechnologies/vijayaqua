@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\PartnerAccount;
 use App\Models\PartnerTransaction;
 use App\Support\PartnerBalance;
@@ -19,7 +20,7 @@ class PartnerLedgerController extends Controller
 {
     public function index(Request $request): View
     {
-        [$entries, $summary] = $this->listing($request, PartnerTransaction::query());
+        [$entries, $summary] = $this->listing($request, Access::scope(PartnerTransaction::query(), 'partner-ledger'));
 
         return $request->ajax()
             ? view('admin.partner-ledger.partials.results', compact('entries', 'summary'))
@@ -28,7 +29,9 @@ class PartnerLedgerController extends Controller
 
     public function account(Request $request, PartnerAccount $partner): View
     {
-        [$entries, $summary] = $this->listing($request, $partner->transactions()->getQuery());
+        $visible = Access::scope($partner->transactions()->getQuery(), 'partner-ledger');
+        abort_unless((clone $visible)->exists(), 404);
+        [$entries, $summary] = $this->listing($request, $visible);
 
         return $request->ajax()
             ? view('admin.partner-ledger.partials.results', compact('entries', 'summary'))
@@ -37,9 +40,13 @@ class PartnerLedgerController extends Controller
 
     public function create(Request $request): View
     {
+        $partners = PartnerAccount::query();
+        if (! Access::all('partner-ledger')) {
+            $partners->whereHas('transactions', fn ($q) => $q->where('user_id', auth()->id()));
+        }
         return view('admin.partner-ledger.create', [
-            'entry' => null, 'partners' => PartnerAccount::orderBy('name')->get(['name']),
-            'selectedPartner' => $request->integer('partner') ? PartnerAccount::find($request->integer('partner')) : null,
+            'entry' => null, 'partners' => (clone $partners)->orderBy('name')->get(['name']),
+            'selectedPartner' => $request->integer('partner') ? (clone $partners)->find($request->integer('partner')) : null,
         ]);
     }
 
@@ -67,7 +74,9 @@ class PartnerLedgerController extends Controller
         $transaction->load('partner');
 
         return view('admin.partner-ledger.edit', [
-            'entry' => $transaction, 'partners' => PartnerAccount::orderBy('name')->get(['name']),
+            'entry' => $transaction, 'partners' => Access::all('partner-ledger')
+                ? PartnerAccount::orderBy('name')->get(['name'])
+                : PartnerAccount::whereHas('transactions', fn ($q) => $q->where('user_id', auth()->id()))->orderBy('name')->get(['name']),
             'selectedPartner' => $transaction->partner,
         ]);
     }
@@ -76,6 +85,8 @@ class PartnerLedgerController extends Controller
     {
         $data = $this->validated($request);
         DB::transaction(function () use ($data, $transaction): void {
+            $transaction = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canEdit('partner-ledger', $transaction), 403);
             $partner = PartnerAccount::createOrFirst(
                 ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
             );
@@ -94,7 +105,11 @@ class PartnerLedgerController extends Controller
 
     public function destroy(PartnerTransaction $transaction): RedirectResponse
     {
-        $transaction->delete();
+        DB::transaction(function () use ($transaction): void {
+            $record = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canDelete('partner-ledger', $record), 403);
+            $record->delete();
+        }, 3);
 
         return back()->with('success', 'Partner transaction removed.');
     }
@@ -122,6 +137,7 @@ class PartnerLedgerController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'sort' => ['nullable', Rule::in(['newest', 'oldest'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
         if ($search = trim($filters['search'] ?? '')) {
@@ -131,16 +147,17 @@ class PartnerLedgerController extends Controller
             });
         }
         if ($type = $filters['type'] ?? null) $query->where('type', $type);
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
         if ($from = $filters['from'] ?? null) $query->whereDate('transaction_date', '>=', $from);
         if ($to = $filters['to'] ?? null) $query->whereDate('transaction_date', '<=', $to);
 
-        $totals = (clone $query)->toBase()->selectRaw("COUNT(*) AS count, COALESCE(SUM(CASE WHEN type='send' THEN amount_rupees ELSE 0 END),0) AS sent, COALESCE(SUM(CASE WHEN type='receive' THEN amount_rupees ELSE 0 END),0) AS received")->first();
+        $totals = (clone $query)->toBase()->selectRaw("COUNT(*) AS count, COALESCE(SUM(CASE WHEN approval_status='approved' AND type='send' THEN amount_rupees ELSE 0 END),0) AS sent, COALESCE(SUM(CASE WHEN approval_status='approved' AND type='receive' THEN amount_rupees ELSE 0 END),0) AS received")->first();
         $summary = [
             'count' => $totals->count, 'sent' => (string) $totals->sent,
             'received' => (string) $totals->received,
             'balance' => PartnerBalance::fromTotals((string) $totals->sent, (string) $totals->received),
         ];
-        $query->with(['partner', 'creator', 'editor']);
+        $query->with(['partner', 'creator', 'editor', 'approver']);
         if (($filters['sort'] ?? 'newest') === 'oldest') $query->orderBy('transaction_date')->orderBy('id');
         else $query->orderByDesc('transaction_date')->orderByDesc('id');
 

@@ -2,7 +2,9 @@
 
 @section('title', 'Payments')
 @section('page-title', 'Payments')
-@section('page-action')<a href="{{ route('payments.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Payment</a>@endsection
+@section('page-action')
+@if(\App\Support\Access::allowed('payments', 'create'))<a href="{{ route('payments.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Payment</a>@endif
+@endsection
 
 @section('content')
 <div data-ledger-list>

@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const filterForm of [desktop, mobile]) {
             filterForm.elements.search.value = url.searchParams.get('search') || '';
             filterForm.elements.status.value = url.searchParams.get('status') || '';
+            filterForm.elements.approval.value = url.searchParams.get('approval') || '';
             filterForm.elements.sort.value = url.searchParams.get('sort') || 'newest';
         }
     }
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         filterForm.elements.sort.addEventListener('change', () => filter(filterForm));
         filterForm.elements.status.addEventListener('change', () => filter(filterForm));
+        filterForm.elements.approval.addEventListener('change', () => filter(filterForm));
         filterForm.elements.search.addEventListener('input', () => {
             clearTimeout(timer);
             if (filterForm === desktop) timer = setTimeout(() => filter(filterForm), 350);
@@ -86,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('newProduct').addEventListener('click', () => {
+    document.getElementById('newProduct')?.addEventListener('click', () => {
         clearModalErrors();
         form.reset();
         form.action = modal.dataset.storeUrl;

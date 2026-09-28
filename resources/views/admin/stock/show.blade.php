@@ -4,15 +4,16 @@
 @section('page-title', 'Stock Entry #'.$entry->id)
 @section('page-action')
     <div class="d-flex gap-2">
-        <a href="{{ route('stock-entries.edit', $entry) }}" class="btn btn-primary">Edit Entry</a>
-        <form method="POST" action="{{ route('stock-entries.destroy', $entry) }}" class="d-inline">@csrf @method('DELETE')
+        @if(\App\Support\Access::canEdit('stock-entries', $entry))<a href="{{ route('stock-entries.edit', $entry) }}" class="btn btn-primary">Edit Entry</a>@endif
+        @if(\App\Support\Access::canDelete('stock-entries', $entry))<form method="POST" action="{{ route('stock-entries.destroy', $entry) }}" class="d-inline">@csrf @method('DELETE')
             <button type="button" class="btn btn-outline-danger" data-va-delete data-va-delete-name="Stock Entry #{{ $entry->id }}">Delete</button>
-        </form>
+        </form>@endif
         <a href="{{ route('stock-entries.index') }}" class="btn btn-outline-secondary">Back to List</a>
     </div>
 @endsection
 
 @section('content')
+<p>@include('shared.approval-status', ['record' => $entry])</p>
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h4 class="card-title mb-0">Entry Details</h4>

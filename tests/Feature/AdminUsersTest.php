@@ -36,7 +36,7 @@ class AdminUsersTest extends TestCase
             ->assertDontSeeText('9999999999');
     }
 
-    public function test_staff_cannot_log_in_or_access_admin_pages(): void
+    public function test_staff_can_log_in_but_cannot_access_unassigned_modules(): void
     {
         $staff = User::create([
             'name' => 'Staff', 'mobile' => '9876543210', 'role' => 'staff',
@@ -46,9 +46,9 @@ class AdminUsersTest extends TestCase
         $this->postJson('/login', [
             'mobile' => $staff->mobile,
             'password' => 'SecurePass123',
-        ])->assertStatus(422);
+        ])->assertOk()->assertJsonPath('redirect', route('dashboard'));
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($staff);
         $this->actingAs($staff)->get('/users')->assertForbidden();
     }
 

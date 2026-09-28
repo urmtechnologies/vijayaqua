@@ -2,11 +2,12 @@
 @section('title', 'Upcoming Order #'.$order->id)
 @section('page-title', 'Upcoming Order #'.$order->id)
 @section('page-action')<div class="d-flex gap-2">
-    <a href="{{ route('upcoming-orders.edit', $order) }}" class="btn btn-primary">Edit Order</a>
-    <form method="POST" action="{{ route('upcoming-orders.destroy', $order) }}" class="d-inline">@csrf @method('DELETE')<button type="button" class="btn btn-outline-danger" data-va-delete data-va-delete-name="Upcoming Order #{{ $order->id }}">Delete</button></form>
+    @if(\App\Support\Access::canEdit('upcoming-orders', $order))<a href="{{ route('upcoming-orders.edit', $order) }}" class="btn btn-primary">Edit Order</a>@endif
+    @if(\App\Support\Access::canDelete('upcoming-orders', $order))<form method="POST" action="{{ route('upcoming-orders.destroy', $order) }}" class="d-inline">@csrf @method('DELETE')<button type="button" class="btn btn-outline-danger" data-va-delete data-va-delete-name="Upcoming Order #{{ $order->id }}">Delete</button></form>@endif
     <a href="{{ route('upcoming-orders.index') }}" class="btn btn-outline-secondary">Back to List</a>
 </div>@endsection
 @section('content')
+<p>@include('shared.approval-status', ['record' => $order])</p>
 <div class="card">
     <div class="card-header d-flex justify-content-between flex-wrap gap-2"><h4 class="card-title mb-0">Order Details</h4><span class="text-muted">{{ $order->scheduled_date->format('d M Y') }}</span></div>
     <div class="card-body">

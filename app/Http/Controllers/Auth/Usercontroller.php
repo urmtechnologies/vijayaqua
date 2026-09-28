@@ -14,7 +14,7 @@ class Usercontroller extends Controller
 {
     public function login(): View|RedirectResponse
     {
-        return Auth::check() && Auth::user()->role === 'admin'
+        return Auth::check()
             ? redirect()->route('dashboard')
             : view('auth.login');
     }
@@ -26,7 +26,7 @@ class Usercontroller extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $key = 'admin-login:'.sha1($data['mobile'].'|'.$request->ip());
+        $key = 'login:'.sha1($data['mobile'].'|'.$request->ip());
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json([
@@ -34,11 +34,11 @@ class Usercontroller extends Controller
             ], 429);
         }
 
-        // Staff accounts are created now; their login is intentionally disabled.
         if (! Auth::attempt([
             'mobile' => $data['mobile'],
             'password' => $data['password'],
-            'role' => 'admin',
+            'approval_status' => 'approved',
+            'deleted_at' => null,
         ])) {
             RateLimiter::hit($key, 60);
 

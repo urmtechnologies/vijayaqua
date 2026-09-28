@@ -195,10 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const history = document.createElement('div');
                     history.className = 'va-party-history';
                     for (const previous of data.recent) {
-                        const link = document.createElement('a');
-                        link.href = previous.url;
-                        link.textContent = `${previous.invoice} · ${previous.date} · Due ₹${Number(previous.due).toLocaleString('en-US')}`;
-                        history.append(link);
+                        const item = document.createElement(previous.url ? 'a' : 'span');
+                        if (previous.url) item.href = previous.url;
+                        item.textContent = `${previous.invoice} · ${previous.date} · Due ₹${Number(previous.due).toLocaleString('en-US')}`;
+                        history.append(item);
                     }
                     partyInfo.append(history);
                 }

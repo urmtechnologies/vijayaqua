@@ -23,6 +23,7 @@
             </div>
             <div class="d-flex align-items-center gap-3 ms-auto px-3">
                 <span class="d-none d-sm-inline text-muted">{{ auth()->user()->name }}</span>
+                <a href="{{ route('password.edit') }}" class="btn btn-outline-secondary btn-sm">Password</a>
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
                     <button type="submit" class="btn btn-outline-primary btn-sm">Logout</button>
@@ -44,8 +45,8 @@
                 @if(session('success'))
                     <div class="alert alert-success" role="status">{{ session('success') }}</div>
                 @endif
-                @if($errors->has('stock_entry') || $errors->has('sale'))
-                    <div class="alert alert-danger" role="alert">{{ $errors->first('stock_entry') ?: $errors->first('sale') }}</div>
+                @if($errors->any())
+                    <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
                 @endif
                 @yield('content')
             </div>

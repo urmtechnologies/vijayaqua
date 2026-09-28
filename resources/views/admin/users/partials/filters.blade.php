@@ -19,6 +19,7 @@
         <option value="name" @selected(request('sort') === 'name')>Name A–Z</option>
     </select>
 </div>
+<div class="col-12 col-md-2"><label class="form-label">Approval</label><select name="approval" class="form-select"><option value="">All</option><option value="approved" @selected(request('approval') === 'approved')>Approved</option><option value="pending" @selected(request('approval') === 'pending')>Pending</option></select></div>
 <div class="col-12 col-md-auto">
     <button type="submit" class="btn btn-primary w-100">Apply</button>
 </div>

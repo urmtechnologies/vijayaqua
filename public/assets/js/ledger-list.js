@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     target.addEventListener('click', event => {
-        const link = event.target.closest('.pagination a.page-link');
+        const link = event.target.closest('.pagination a.page-link, a[data-ledger-nav]');
         if (!link || link.closest('.disabled') || link.closest('.active')) return;
         event.preventDefault();
         load(new URL(link.href));

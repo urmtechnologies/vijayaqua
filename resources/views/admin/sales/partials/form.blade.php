@@ -36,7 +36,7 @@
             </div>
             <div class="col-12">
                 <div id="partyLookup" class="va-party-lookup" aria-live="polite"
-                     data-initial-url="{{ $customer ? route('customers.show', $customer) : '' }}"
+                     data-initial-url="{{ $customer && \App\Support\Access::allowed('sales') ? route('customers.show', $customer) : '' }}"
                      data-initial-name="{{ $customer?->name }}"></div>
             </div>
         </div>
@@ -49,7 +49,16 @@
         </div>
         <div class="card-body">
             @if($errors->has('items'))<div class="alert alert-danger">{{ $errors->first('items') }}</div>@endif
-            @if($products->isEmpty())<div class="alert alert-info">Add an active product in <a href="{{ route('products.index') }}">Products Setting</a> first.</div>@endif
+            @if($products->isEmpty())
+                <div class="alert alert-info">
+                    No active product is available.
+                    @if(\App\Support\Access::allowed('products'))
+                        <a href="{{ route('products.index') }}">Open Products Setting</a>.
+                    @else
+                        Ask an administrator to add one.
+                    @endif
+                </div>
+            @endif
             <div id="saleRows" class="d-grid gap-3">
                 @foreach($rows as $index => $row)
                     @php $selectedProduct = $products->firstWhere('id', (int) ($row['product_id'] ?? 0)); @endphp
@@ -129,7 +138,7 @@
             </div></div>
         </div>
         <div class="card-footer d-flex justify-content-end gap-2">
-            <a href="{{ $sale ? route('sales.show', $sale) : route('sales.index') }}" class="btn btn-light">Cancel</a>
+            <a href="{{ $sale && \App\Support\Access::allowed('sales', 'invoice') ? route('sales.show', $sale) : route('sales.index') }}" class="btn btn-light">Cancel</a>
             <button type="submit" id="saveSale" class="btn btn-primary" @if($products->isEmpty()) disabled @endif>
                 <span id="saleSpinner" class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true"></span>
                 <span id="saleButtonText">{{ $sale ? 'Save Changes' : 'Create Invoice' }}</span>

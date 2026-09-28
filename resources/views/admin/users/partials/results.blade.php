@@ -6,7 +6,7 @@
         <tbody>
         @forelse($users as $user)
             <tr>
-                <td><span class="va-avatar">{{ strtoupper(mb_substr($user->name, 0, 1)) }}</span><strong>{{ $user->name }}</strong>
+                <td><span class="va-avatar">{{ strtoupper(mb_substr($user->name, 0, 1)) }}</span><strong>{{ $user->name }}</strong> @include('shared.approval-status', ['record' => $user])
                     <div class="text-muted small">Added by {{ $user->creator?->name ?? 'System' }}@if($user->updated_by) · Edited by {{ $user->editor?->name ?? 'System' }}@endif</div>
                 </td>
                 <td>{{ $user->mobile }}</td>
@@ -14,10 +14,10 @@
                 <td>₹{{ number_format($user->salary, 2) }}</td>
                 <td>{{ $user->created_at->format('d M Y') }}</td>
                 <td class="text-end">
-                    <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-outline-primary" aria-label="Edit {{ $user->name }}">Edit</a>
-                    <button type="button" class="btn btn-sm btn-outline-danger"
+                    @if(\App\Support\Access::canEdit('users', $user))<a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-outline-primary" aria-label="Edit {{ $user->name }}">Edit</a>@endif
+                    @if(\App\Support\Access::canDelete('users', $user))<button type="button" class="btn btn-sm btn-outline-danger"
                             data-delete-url="{{ route('users.destroy', $user) }}"
-                            data-user-name="{{ $user->name }}" aria-label="Delete {{ $user->name }}">Delete</button>
+                            data-user-name="{{ $user->name }}" aria-label="Delete {{ $user->name }}">Delete</button>@endif
                 </td>
             </tr>
         @empty

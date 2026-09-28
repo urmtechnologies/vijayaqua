@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RequiresApproval;
 use App\Models\Concerns\TracksCreator;
 use App\Models\Concerns\TracksEditor;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -10,11 +11,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, TracksCreator, TracksEditor;
+    use HasFactory, Notifiable, SoftDeletes, TracksCreator, TracksEditor, RequiresApproval;
 
     /**
      * The attributes that are mass assignable.
@@ -45,6 +47,16 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    public function permissions(): HasMany
+    {
+        return $this->hasMany(UserPermission::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class, 'employee_id');
+    }
+
     protected function casts(): array
     {
         return [

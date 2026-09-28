@@ -1,7 +1,9 @@
 @extends('layouts.admin')
 @section('title', 'Partner Ledger')
 @section('page-title', 'Partner Ledger')
-@section('page-action')<a href="{{ route('partner-ledger.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Entry</a>@endsection
+@section('page-action')
+@if(\App\Support\Access::allowed('partner-ledger', 'create'))<a href="{{ route('partner-ledger.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Entry</a>@endif
+@endsection
 @section('content')
 <div data-ledger-list class="card">
     <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2"><h4 class="card-title mb-0">Send & Receive History</h4><button type="button" class="btn btn-outline-primary d-md-none" data-bs-toggle="offcanvas" data-bs-target="#ledgerFilters">Filters</button></div>

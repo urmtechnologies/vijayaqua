@@ -2,7 +2,9 @@
 
 @section('title', 'Stock Overview')
 @section('page-title', 'Stock Overview')
-@section('page-action')<a href="{{ route('stock-entries.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Stock Entry</a>@endsection
+@section('page-action')
+@if(\App\Support\Access::allowed('stock-entries', 'create'))<a href="{{ route('stock-entries.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Stock Entry</a>@endif
+@endsection
 
 @section('content')
 <div data-ledger-list class="card">

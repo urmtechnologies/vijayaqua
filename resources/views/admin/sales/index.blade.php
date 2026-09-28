@@ -3,7 +3,7 @@
 @section('title', 'Sales List')
 @section('page-title', 'Sales List')
 @section('page-action')
-    <a href="{{ route('sales.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Sale</a>
+    @if(\App\Support\Access::allowed('sales', 'create'))<a href="{{ route('sales.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Sale</a>@endif
 @endsection
 
 @section('content')

@@ -2,7 +2,9 @@
 
 @section('title', 'Expenses')
 @section('page-title', 'Expenses')
-@section('page-action')<a href="{{ route('expenses.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Expense</a>@endsection
+@section('page-action')
+@if(\App\Support\Access::allowed('expenses', 'create'))<a href="{{ route('expenses.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Expense</a>@endif
+@endsection
 
 @section('content')
 <div data-ledger-list class="card">

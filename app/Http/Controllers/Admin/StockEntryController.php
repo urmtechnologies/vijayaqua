@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\Product;
 use App\Models\StockEntry;
 use App\Models\StockEntryItem;
@@ -24,10 +25,12 @@ class StockEntryController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'sort' => ['nullable', Rule::in(['newest', 'oldest'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = StockEntry::query();
+        $query = Access::scope(StockEntry::query(), 'stock-entries');
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
 
         $search = trim($filters['search'] ?? '');
         $type = $filters['type'] ?? null;
@@ -53,7 +56,7 @@ class StockEntryController extends Controller
                 ->sum('cartons'),
         ];
 
-        $query->with(['creator', 'editor', 'items:id,stock_entry_id,type'])
+        $query->with(['creator', 'editor', 'approver', 'items:id,stock_entry_id,type'])
             ->withCount(['items' => $matchedItem])
             ->withSum(['items as carton_total' => $matchedItem], 'cartons');
         if (($filters['sort'] ?? 'newest') === 'oldest') {
@@ -90,7 +93,7 @@ class StockEntryController extends Controller
 
     public function show(StockEntry $stockEntry): View
     {
-        $stockEntry->load(['creator', 'editor', 'items.product']);
+        $stockEntry->load(['creator', 'editor', 'approver', 'items.product']);
 
         return view('admin.stock.show', ['entry' => $stockEntry]);
     }
@@ -111,6 +114,7 @@ class StockEntryController extends Controller
 
         DB::transaction(function () use ($stockEntry, $data): void {
             $entry = StockEntry::query()->lockForUpdate()->findOrFail($stockEntry->id);
+            abort_unless(Access::canEdit('stock-entries', $entry), 403);
             $old = $entry->items()->pluck('cartons', 'product_id');
             $new = collect($data['items'])->pluck('cartons', 'product_id');
             $productIds = $old->keys()->merge($new->keys())->unique()->sort()->values();
@@ -118,7 +122,7 @@ class StockEntryController extends Controller
 
             foreach ($productIds as $productId) {
                 $receivedAfterEdit = StockBalance::received((int) $productId)
-                    - (int) $old->get($productId, 0) + (int) $new->get($productId, 0);
+                    - ($entry->approval_status === 'approved' ? (int) $old->get($productId, 0) : 0) + (int) $new->get($productId, 0);
                 if ($receivedAfterEdit < StockBalance::sold((int) $productId)) {
                     throw ValidationException::withMessages([
                         'items' => 'This edit would reduce stock below cartons already sold.',
@@ -138,10 +142,11 @@ class StockEntryController extends Controller
     {
         DB::transaction(function () use ($stockEntry): void {
             $entry = StockEntry::whereKey($stockEntry->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canDelete('stock-entries', $entry), 403);
             $old = $entry->items()->pluck('cartons', 'product_id');
             Product::withTrashed()->whereIn('id', $old->keys())->orderBy('id')->lockForUpdate()->get();
             foreach ($old as $productId => $cartons) {
-                if (StockBalance::received((int) $productId) - (int) $cartons < StockBalance::sold((int) $productId)) {
+                if (StockBalance::received((int) $productId) - ($entry->approval_status === 'approved' ? (int) $cartons : 0) < StockBalance::sold((int) $productId)) {
                     throw ValidationException::withMessages(['stock_entry' => 'Cannot delete stock already used by sales.']);
                 }
             }
@@ -175,7 +180,7 @@ class StockEntryController extends Controller
 
         foreach ($data['items'] as $index => $item) {
             $product = $selected->get($item['product_id']);
-            if (! $product || (($product->status !== 'active' || $product->trashed())
+            if (! $product || (($product->status !== 'active' || $product->approval_status !== 'approved' || $product->trashed())
                 && ! in_array($product->id, $existingIds, true))) {
                 throw ValidationException::withMessages([
                     "items.$index.product_id" => 'Select an active product.',
@@ -193,7 +198,7 @@ class StockEntryController extends Controller
         return Product::withTrashed()
             ->where(function ($query) use ($existingIds): void {
                 $query->where(function ($active): void {
-                    $active->where('status', 'active')->whereNull('deleted_at');
+                    $active->where('status', 'active')->where('approval_status', 'approved')->whereNull('deleted_at');
                 })->orWhereIn('id', $existingIds);
             })
             ->orderBy('name')->get(['id', 'name', 'status', 'deleted_at']);

@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             form.elements.search.value = url.searchParams.get('search') || '';
             form.elements.sort.value = url.searchParams.get('sort') || 'newest';
             form.elements.role.value = url.searchParams.get('role') || '';
+            form.elements.approval.value = url.searchParams.get('approval') || '';
         }
     }
 
@@ -22,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, {
                 signal: controller.signal,
-                headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html' },
+                headers: {'X-Requested-With': 'XMLHttpRequest', Accept: 'text/html'},
                 credentials: 'same-origin',
             });
             if (response.status === 401 || response.redirected) { window.location.assign(response.url); return; }
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', (event) => { event.preventDefault(); clearTimeout(timer); filter(form); });
         form.elements.sort.addEventListener('change', () => filter(form));
         form.elements.role.addEventListener('change', () => filter(form));
+        form.elements.approval.addEventListener('change', () => filter(form));
         form.elements.search.addEventListener('input', () => {
             clearTimeout(timer);
             if (form === desktop) timer = setTimeout(() => filter(form), 350);

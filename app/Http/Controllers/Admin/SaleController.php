@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Sale;
@@ -25,10 +26,12 @@ class SaleController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
             'status' => ['nullable', Rule::in(['paid', 'due'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = Sale::query();
+        $query = Access::scope(Sale::query(), 'sales');
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(function ($q) use ($search): void {
                 $q->where('invoice_no', 'like', '%'.$search.'%')
@@ -44,20 +47,20 @@ class SaleController extends Controller
         if ($to = $filters['to'] ?? null) $query->whereDate('sale_date', '<=', $to);
 
         if (($filters['status'] ?? null) === 'paid') {
-            $query->whereRaw('sales.total_rupees <= (SELECT COALESCE(SUM(amount_rupees), 0) FROM sale_payments WHERE sale_payments.sale_id = sales.id)');
+            $query->whereRaw("sales.total_rupees <= (SELECT COALESCE(SUM(amount_rupees), 0) FROM sale_payments WHERE sale_payments.deleted_at IS NULL AND sale_payments.approval_status = 'approved' AND sale_payments.sale_id = sales.id)");
         } elseif (($filters['status'] ?? null) === 'due') {
-            $query->whereRaw('sales.total_rupees > (SELECT COALESCE(SUM(amount_rupees), 0) FROM sale_payments WHERE sale_payments.sale_id = sales.id)');
+            $query->whereRaw("sales.total_rupees > (SELECT COALESCE(SUM(amount_rupees), 0) FROM sale_payments WHERE sale_payments.deleted_at IS NULL AND sale_payments.approval_status = 'approved' AND sale_payments.sale_id = sales.id)");
         }
 
         $summary = [
             'invoices' => (clone $query)->count(),
-            'total' => (string) (clone $query)->sum('total_rupees'),
-            'paid' => (string) SalePayment::query()->whereIn('sale_id', (clone $query)->select('sales.id'))->sum('amount_rupees'),
+            'total' => (string) (clone $query)->where('approval_status', 'approved')->sum('total_rupees'),
+            'paid' => (string) SalePayment::query()->where('approval_status', 'approved')->whereIn('sale_id', (clone $query)->select('sales.id'))->sum('amount_rupees'),
         ];
         $summary['due'] = RupeeAmount::difference($summary['total'], $summary['paid']);
 
-        $sales = $query->with(['customer', 'creator', 'editor'])
-            ->withSum('payments as paid_total', 'amount_rupees')
+        $sales = $query->with(['customer', 'creator', 'editor', 'approver'])
+            ->withSum(['payments as paid_total' => fn ($q) => $q->where('approval_status', 'approved')], 'amount_rupees')
             ->orderByDesc('sale_date')->orderByDesc('id')->paginate(10)->withQueryString();
 
         return $request->ajax()
@@ -70,6 +73,8 @@ class SaleController extends Controller
         $mobile = $request->query('mobile');
         $customer = is_string($mobile) && preg_match('/^[0-9]{10}$/', $mobile)
             ? Customer::where('mobile', $mobile)->first() : null;
+        if ($customer && ! Access::all('sales')
+            && ! $customer->sales()->where('user_id', auth()->id())->exists()) $customer = null;
 
         return view('admin.sales.create', [
             'customer' => $customer,
@@ -137,7 +142,7 @@ class SaleController extends Controller
             $products = Product::whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             foreach ($lineItems as $index => &$item) {
                 $product = $products->get($item['product_id']);
-                if (! $product || $product->status !== 'active') {
+                if (! $product || $product->status !== 'active' || $product->approval_status !== 'approved') {
                     throw ValidationException::withMessages(["items.$index.product_id" => 'Select an active product.']);
                 }
                 if (StockBalance::available($product->id) < $item['cartons']) {
@@ -171,16 +176,17 @@ class SaleController extends Controller
             return $sale;
         }, 3);
 
-        return redirect()->route('sales.show', $sale)->with('success', 'Invoice created successfully.');
+        return redirect()->route(Access::allowed('sales', 'invoice') ? 'sales.show' : 'sales.index',
+            Access::allowed('sales', 'invoice') ? [$sale] : [])->with('success', 'Invoice created successfully.');
     }
 
     public function show(Sale $sale): View
     {
-        $sale->load(['customer', 'creator', 'editor', 'items', 'payments.creator']);
+        $sale->load(['customer', 'creator', 'editor', 'approver', 'items', 'payments.creator', 'payments.approver']);
 
         return view('admin.sales.show', [
             'sale' => $sale,
-            'paid' => (int) $sale->payments->sum('amount_rupees'),
+            'paid' => (int) $sale->payments->where('approval_status', 'approved')->sum('amount_rupees'),
         ]);
     }
 
@@ -192,9 +198,9 @@ class SaleController extends Controller
         return view('admin.sales.edit', [
             'sale' => $sale,
             'customer' => $sale->customer,
-            'paid' => (int) $sale->payments()->sum('amount_rupees'),
+            'paid' => (int) $sale->payments()->where('approval_status', 'approved')->sum('amount_rupees'),
             'products' => Product::withTrashed()->where(function ($query) use ($existingIds): void {
-                $query->where(fn ($active) => $active->where('status', 'active')->whereNull('deleted_at'))
+                $query->where(fn ($active) => $active->where('status', 'active')->where('approval_status', 'approved')->where('approval_status', 'approved')->whereNull('deleted_at'))
                     ->orWhereIn('id', $existingIds);
             })->withSum('stockItems as stock_received', 'cartons')
                 ->withSum('soldItems as stock_sold', 'cartons')->orderBy('name')->get(),
@@ -236,8 +242,9 @@ class SaleController extends Controller
 
         DB::transaction(function () use ($sale, $data, $lines, $subtotal, $discount, $vehicle, $total): void {
             $invoice = Sale::whereKey($sale->id)->lockForUpdate()->firstOrFail();
-            $paid = (int) $invoice->payments()->sum('amount_rupees');
-            if ($total < $paid) {
+            abort_unless(Access::canEdit('sales', $invoice), 403);
+            $paid = (int) $invoice->payments()->where('approval_status', 'approved')->sum('amount_rupees');
+            if ($total < (int) $invoice->payments()->sum('amount_rupees')) {
                 throw ValidationException::withMessages(['items' => 'Invoice total cannot be lower than payments already received.']);
             }
             if ($paid < $total && empty($data['due_date'])) {
@@ -253,10 +260,10 @@ class SaleController extends Controller
             foreach ($lines as $index => &$line) {
                 $product = $products->get($line['product_id']);
                 $wasOnInvoice = $old->has($line['product_id']);
-                if (! $product || (($product->status !== 'active' || $product->trashed()) && ! $wasOnInvoice)) {
+                if (! $product || (($product->status !== 'active' || $product->approval_status !== 'approved' || $product->trashed()) && ! $wasOnInvoice)) {
                     throw ValidationException::withMessages(["items.$index.product_id" => 'Select an active product.']);
                 }
-                if (StockBalance::available($product->id) + (int) $old->get($product->id, 0) < $line['cartons']) {
+                if (StockBalance::available($product->id) + ($invoice->approval_status === 'approved' ? (int) $old->get($product->id, 0) : 0) < $line['cartons']) {
                     throw ValidationException::withMessages(["items.$index.cartons" => "Not enough stock for {$product->name}."]);
                 }
                 $line['product_name'] = $product->name;
@@ -276,18 +283,22 @@ class SaleController extends Controller
             $invoice->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
         }, 3);
 
-        return redirect()->route('sales.show', $sale)->with('success', 'Invoice updated successfully.');
+        return redirect()->route(Access::allowed('sales', 'invoice') ? 'sales.show' : 'sales.index',
+            Access::allowed('sales', 'invoice') ? [$sale] : [])->with('success', 'Invoice updated successfully.');
     }
 
     public function destroy(Sale $sale): RedirectResponse
     {
         DB::transaction(function () use ($sale): void {
             $invoice = Sale::whereKey($sale->id)->lockForUpdate()->firstOrFail();
-            if ($invoice->payments()->exists()) {
+            abort_unless(Access::canDelete('sales', $invoice), 403);
+            if ($invoice->payments()->where('approval_status', 'approved')->exists()) {
                 throw ValidationException::withMessages(['sale' => 'Invoice has payments. Keep the payment history; paid invoices cannot be deleted.']);
             }
             Product::withTrashed()->whereIn('id', $invoice->items()->pluck('product_id'))
                 ->orderBy('id')->lockForUpdate()->get();
+            // A pending invoice can include a pending initial payment; remove it with the draft.
+            $invoice->payments()->where('approval_status', 'pending')->update(['deleted_at' => now(), 'updated_by' => auth()->id()]);
             $invoice->delete();
         }, 3);
 

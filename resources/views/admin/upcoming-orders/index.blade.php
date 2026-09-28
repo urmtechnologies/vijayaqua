@@ -1,7 +1,9 @@
 @extends('layouts.admin')
 @section('title', 'Upcoming Orders')
 @section('page-title', 'Upcoming Orders')
-@section('page-action')<a href="{{ route('upcoming-orders.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Order</a>@endsection
+@section('page-action')
+@if(\App\Support\Access::allowed('upcoming-orders', 'create'))<a href="{{ route('upcoming-orders.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Order</a>@endif
+@endsection
 @section('content')
 <div data-ledger-list class="card">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2"><h4 class="card-title mb-0">Scheduled Orders</h4><button type="button" class="btn btn-outline-primary d-md-none" data-bs-toggle="offcanvas" data-bs-target="#ledgerFilters">Filters</button></div>

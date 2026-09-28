@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Access;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -17,10 +19,12 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
             'sort' => ['nullable', Rule::in(['newest', 'oldest', 'name'])],
+            'approval' => ['nullable', Rule::in(['pending', 'approved'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = Product::query()->with(['creator', 'editor']);
+        $query = Product::query()->with(['creator', 'editor', 'approver']);
+        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
 
         if ($search = trim($filters['search'] ?? '')) {
             $query->where('name', 'like', '%'.$search.'%');
@@ -40,7 +44,7 @@ class ProductController extends Controller
 
         $editingProduct = null;
         if ($request->session()->has('errors') && old('form_context') === 'edit') {
-            $editingProduct = Product::find((int) old('product_id'));
+            $editingProduct = Access::scope(Product::query(), 'products')->find((int) old('product_id'));
         }
 
         return $request->ajax()
@@ -64,21 +68,32 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): RedirectResponse
     {
+        abort_unless(Access::canEdit('products', $product), 403);
         if (is_string($request->input('name'))) {
             $request->merge(['name' => trim($request->input('name'))]);
         }
 
-        $product->update($request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:150', Rule::unique('products', 'name')->ignore($product->id)],
             'status' => ['required', Rule::in(['active', 'inactive'])],
-        ]));
+        ]);
+        DB::transaction(function () use ($product, $data): void {
+            $record = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canEdit('products', $record), 403);
+            $record->update($data);
+        }, 3);
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
     public function destroy(Product $product): RedirectResponse
     {
-        $product->delete();
+        abort_unless(Access::canDelete('products', $product), 403);
+        DB::transaction(function () use ($product): void {
+            $record = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            abort_unless(Access::canDelete('products', $record), 403);
+            $record->delete();
+        }, 3);
 
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }

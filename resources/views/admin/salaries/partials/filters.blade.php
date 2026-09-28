@@ -1,0 +1,4 @@
+<div class="col-md-4"><label class="form-label">Name or mobile</label><input type="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Find staff"></div>
+<div class="col-md-3"><label class="form-label">Month</label><input type="month" name="month" value="{{ request('month') }}" class="form-control"></div>
+<div class="col-md-3"><label class="form-label">Balance</label><select name="status" class="form-select"><option value="">All</option><option value="due" @selected(request('status') === 'due')>Due</option><option value="settled" @selected(request('status') === 'settled')>Settled or credit</option></select></div>
+<div class="col-md-2 d-flex gap-2"><button class="btn btn-primary">Apply</button><a href="{{ route('salaries.index') }}" class="btn btn-light va-clear-filters">Clear</a></div>

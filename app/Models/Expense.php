@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RequiresApproval;
 use App\Models\Concerns\TracksCreator;
 use App\Models\Concerns\TracksEditor;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Expense extends Model
 {
-    use SoftDeletes, TracksCreator, TracksEditor;
+    use SoftDeletes, TracksCreator, TracksEditor, RequiresApproval;
 
     protected $fillable = ['expense_date', 'title', 'expense_category_id', 'amount_rupees', 'notes'];
 

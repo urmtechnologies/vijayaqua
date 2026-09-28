@@ -21505,3 +21505,24 @@ table{
 .sidebar-slide.h-100::-webkit-scrollbar {
     display: none;
 }
+
+
+
+@media(max-width:767px){
+   #page-topbar .navbar-header .navbar-logo-box #sidebar-btn {
+    right: 101px !important;
+}
+}
+
+
+#page-topbar .navbar-header .navbar-logo-box .logo {
+    line-height: var(--bs-app-header-height);
+    padding-left: 40px;
+}
+
+
+@media(min-width:992px){
+    #page-topbar .navbar-header .navbar-logo-box #sidebar-btn{
+        display:none;
+    }
+}
