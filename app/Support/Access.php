@@ -48,6 +48,8 @@ final class Access
 
     public static function canEdit(string $module, Model $record): bool
     {
+        if ($module === 'sales' && $record instanceof \App\Models\Sale && $record->is_draft
+            && self::allowed('sales', 'create') && (int) $record->user_id === Auth::id()) return true;
         return self::record($module, 'edit', $record);
     }
 

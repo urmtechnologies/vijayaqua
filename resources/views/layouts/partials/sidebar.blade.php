@@ -6,16 +6,8 @@
         @if(\App\Support\ReportCatalog::visible())<li><a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="mdi mdi-chart-box-outline"></i><span>Reports</span></a></li>@endif
         @if(Access::allowed('users'))<li><a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}"><i class="mdi mdi-account-group-outline"></i><span>Users</span></a></li>@endif
         <li class="menu-title">Modules</li>
-        @if(Access::allowed('sales') || Access::allowed('sales', 'create') || Access::allowed('payments') || Access::allowed('payments', 'create'))
-        <li class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'mm-active' : '' }}">
-            <a href="#sales-submenu" class="has-arrow va-menu-toggle" aria-expanded="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'true' : 'false' }}" aria-controls="sales-submenu"><i class="mdi mdi-cart-outline"></i><span>Sales</span></a>
-            <ul id="sales-submenu" class="sub-menu mm-collapse {{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'mm-show' : '' }}">
-                @if(Access::allowed('sales', 'create'))<li><a href="{{ route('sales.create') }}" class="{{ request()->routeIs('sales.create') ? 'active' : '' }}">Add Sale</a></li>@endif
-                @if(Access::allowed('sales'))<li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.index', 'sales.show', 'customers.*') ? 'active' : '' }}">Sales List</a></li>@endif
-                @if(Access::allowed('payments'))<li><a href="{{ route('payments.index') }}" class="{{ request()->routeIs('payments.*') ? 'active' : '' }}">Payments</a></li>@endif
-                @if(!Access::allowed('payments') && Access::allowed('payments', 'create'))<li><a href="{{ route('payments.create') }}">Add Payment</a></li>@endif
-            </ul>
-        </li>@endif
+        @if(Access::allowed('sales') || Access::allowed('sales', 'create'))
+        <li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'active' : '' }}"><i class="ri-shopping-bag-3-line"></i><span>Sales</span></a></li>@endif
         @if(Access::allowed('upcoming-orders'))<li><a href="{{ route('upcoming-orders.index') }}" class="{{ request()->routeIs('upcoming-orders.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-clock-outline"></i><span>Upcoming Orders</span></a></li>@endif
         @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Attendance</span></a></li>@endif
         @if(Access::allowed('stock-entries') || Access::allowed('stock-entries', 'create') || (Access::allowed('stock') && Access::all('stock')))

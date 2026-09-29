@@ -40,6 +40,7 @@ final class RupeeAmount
 
     public static function format(int|string|null $value): string
     {
+        if (str_contains((string) $value, '.')) return SaleMoney::format($value);
         return CartonNumber::format($value);
     }
 

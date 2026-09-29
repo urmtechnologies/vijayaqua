@@ -69,3 +69,52 @@
     .main-content, .page-content, .container-fluid { margin: 0 !important; padding: 0 !important; }
     .va-invoice { border: 0 !important; box-shadow: none !important; }
 }
+/* Sales pages use the full available width; cards keep the same hierarchy on mobile. */
+.va-sales-shell { width: 100%; min-width: 0; }
+.va-sales-shell .card { max-width: none; }
+.va-party-start { width: 100%; }
+.va-party-overview { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(0, 2fr); gap: 16px; align-items: stretch; }
+.va-party-name, .va-wallet-mini { border: 1px solid #e7eaf0; border-radius: 12px; padding: 15px; }
+.va-party-name { display: flex; flex-direction: column; gap: 4px; }
+.va-party-name small, .va-wallet-mini small { color: #728099; }
+.va-party-name strong { font-size: 19px; overflow-wrap: anywhere; }
+.va-wallet-mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; background: #f8f9fc; }
+.va-wallet-mini > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.va-wallet-mini strong { font-size: 17px; overflow-wrap: anywhere; }
+.va-status-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; font-size: 19px; vertical-align: middle; }
+.va-status-approved { color: #0d9374; background: #e7f8f1; }
+.va-status-pending { color: #a76b11; background: #fff3da; }
+.va-status-draft { color: #63738b; background: #eaf0f8; }
+.va-payment-entry details { padding: 10px 12px; background: #f8f9fc; border-radius: 9px; }
+.va-payment-entry summary { cursor: pointer; color: var(--bs-primary); font-weight: 600; }
+.va-party-table td, .va-mobile-card-table td { min-width: 0; }
+.va-party-table strong, .va-mobile-card-table strong { overflow-wrap: anywhere; }
+.va-history-line { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #eef0f4; }
+.va-history-line:last-child { border-bottom: 0; }
+.va-history-line > span { min-width: 0; overflow-wrap: anywhere; }
+.va-history-line > span:last-child { text-align: right; white-space: nowrap; }
+@media (max-width: 767px) {
+    .va-sales-shell { margin: 0; }
+    .va-sales-shell .card-header, .va-sales-shell .card-footer { padding: 14px 16px; }
+    .va-party-overview { grid-template-columns: 1fr; gap: 10px; }
+    .va-wallet-mini { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px; gap: 7px; }
+    .va-wallet-mini strong { font-size: 14px; }
+    .va-wallet-mini small { font-size: 11px; }
+    .va-party-table td[data-label="Party"] strong { display: block; }
+    .va-payment-entry td { display: block !important; }
+    .va-sale-row { grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr) 40px; }
+    .va-sale-row-number { grid-row: 1; grid-column: 1; padding-top: 5px; }
+    .va-sale-product { grid-column: 2 / 5; }
+    .va-sale-qty-field { grid-column: 2 / 3; }
+    .va-sale-rate-field { grid-column: 3 / 5; }
+    .va-sale-line { grid-column: 2 / 4; }
+    .va-sale-remove { grid-column: 4; }
+}
+@media (max-width: 390px) {
+    .va-wallet-mini { grid-template-columns: 1fr 1fr; }
+    .va-wallet-mini > div:last-child { grid-column: 1 / -1; }
+    .va-sale-row { grid-template-columns: 18px minmax(0, 1fr) 40px; }
+    .va-sale-product, .va-sale-qty-field, .va-sale-rate-field { grid-column: 2 / 4; }
+    .va-sale-line { grid-column: 2; }
+    .va-sale-remove { grid-column: 3; }
+}

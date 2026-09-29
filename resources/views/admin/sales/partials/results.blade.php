@@ -1,36 +1,26 @@
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Invoices</small><strong>{{ \App\Support\CartonNumber::format($summary['invoices']) }}</strong></div></div>
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Approved billed</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['total']) }}</strong></div></div>
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Approved received</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['paid']) }}</strong></div></div>
-    <div class="col-6 col-lg-3"><div class="va-ledger-metric"><small>Due</small><strong>₹{{ \App\Support\RupeeAmount::format($summary['due']) }}</strong></div></div>
+<div class="row g-2 mb-3">
+    <div class="col-6 col-xl-3"><div class="va-ledger-metric"><small>Parties</small><strong>{{ number_format($summary['parties']) }}</strong></div></div>
+    <div class="col-6 col-xl-3"><div class="va-ledger-metric"><small>Approved sales</small><strong>₹{{ \App\Support\SaleMoney::format($summary['billed']) }}</strong></div></div>
+    <div class="col-6 col-xl-3"><div class="va-ledger-metric"><small>Received</small><strong>₹{{ \App\Support\SaleMoney::format($summary['received']) }}</strong></div></div>
+    <div class="col-6 col-xl-3"><div class="va-ledger-metric"><small>Balance</small><strong>₹{{ \App\Support\SaleMoney::format($summary['balance']) }}</strong></div></div>
 </div>
-<div class="table-responsive">
-    <table class="table align-middle mb-0">
-        <thead class="table-light"><tr><th>Invoice</th><th>Party</th><th>Date</th><th>Total</th><th>Due</th><th>Added by</th><th class="text-end">Actions</th></tr></thead>
-        <tbody>
-        @forelse($sales as $sale)
-            @php $due = (int) $sale->total_rupees - (int) ($sale->paid_total ?? 0); @endphp
-            <tr>
-                <td><strong>{{ $sale->invoice_no }}</strong> @include('shared.approval-status', ['record' => $sale])</td>
-                <td><a href="{{ route('customers.show', $sale->customer) }}">{{ $sale->customer->name }}</a><br><small class="text-muted">{{ $sale->customer->mobile }}</small></td>
-                <td>{{ $sale->sale_date->format('d M Y') }}</td>
-                <td>₹{{ \App\Support\RupeeAmount::format($sale->total_rupees) }}</td>
-                <td><span class="badge {{ $due > 0 ? 'bg-warning text-dark' : 'bg-success' }}">{{ $due > 0 ? '₹'.\App\Support\RupeeAmount::format($due) : 'Paid' }}</span></td>
-                <td>{{ $sale->creator?->name ?? 'System' }}@if($sale->updated_by)<br><small class="text-muted">Edited by {{ $sale->editor?->name ?? 'System' }}</small>@endif</td>
-                <td class="text-end text-nowrap">
-                    @if(\App\Support\Access::allowed('sales', 'invoice'))<a class="btn btn-sm btn-outline-primary" href="{{ route('sales.show', $sale) }}">Invoice</a>@endif
-                    @if(\App\Support\Access::canEdit('sales', $sale))<a class="btn btn-sm btn-outline-secondary" href="{{ route('sales.edit', $sale) }}">Edit</a>@endif
-                    @if((int) ($sale->paid_total ?? 0) === 0)
-                        @if(\App\Support\Access::canDelete('sales', $sale))<form method="POST" action="{{ route('sales.destroy', $sale) }}" class="d-inline">@csrf @method('DELETE')
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-va-delete data-va-delete-name="{{ $sale->invoice_no }}">Delete</button>
-                        </form>@endif
-                    @endif
-                </td>
-            </tr>
-        @empty
-            <tr><td colspan="7" class="text-center text-muted py-5">No invoices found.</td></tr>
-        @endforelse
-        </tbody>
-    </table>
-</div>
-@include('shared.pagination', ['paginator' => $sales, 'label' => 'Sales pagination'])
+<div class="table-responsive va-party-table">
+<table class="table align-middle mb-0">
+<thead class="table-light"><tr><th>Party</th><th>Sales</th><th>Billed</th><th>Received</th><th>Balance</th><th>Status</th><th class="text-end">Open</th></tr></thead>
+<tbody>
+@forelse($customers as $customer)
+@php $w = $wallets[$customer->id]; @endphp
+<tr>
+    <td data-label="Party"><strong>{{ $customer->name }}</strong><small class="d-block text-muted">{{ $customer->mobile }}</small></td>
+    <td data-label="Sales">{{ $counts[$customer->id] }}@if($pending[$customer->id]) <span class="va-status-icon va-status-pending" title="{{ $pending[$customer->id] }} sale(s) waiting for approval" aria-label="Pending approval"><i class="ri-time-line" aria-hidden="true"></i></span>@endif</td>
+    <td data-label="Billed">₹{{ \App\Support\SaleMoney::format($w['billed']) }}</td>
+    <td data-label="Received">₹{{ \App\Support\SaleMoney::format($w['paid']) }}</td>
+    <td data-label="Balance"><strong>₹{{ \App\Support\SaleMoney::format($w['balance']) }}</strong></td>
+    <td data-label="Status">@if($pending[$customer->id]) <span class="va-status-icon va-status-pending" title="Pending approval" aria-label="Pending approval"><i class="ri-time-line" aria-hidden="true"></i></span> @endif @if($drafts[$customer->id]) <span class="va-status-icon va-status-draft" title="Draft sale" aria-label="Draft sale"><i class="ri-draft-line" aria-hidden="true"></i></span> @endif @if(!$pending[$customer->id] && !$drafts[$customer->id]) <span class="va-status-icon va-status-approved" title="Approved" aria-label="Approved"><i class="ri-checkbox-circle-line" aria-hidden="true"></i></span> @endif</td>
+    <td data-label="Open" class="text-end"><a href="{{ route('customers.show', $customer) }}" class="btn btn-sm btn-outline-primary">Manage <i class="ri-arrow-right-line ms-1"></i></a></td>
+</tr>
+@empty
+<tr><td colspan="7" class="text-center py-5 text-muted">No parties found. Add a sale to get started.</td></tr>
+@endforelse
+</tbody></table></div>
+@include('shared.pagination', ['paginator' => $customers, 'label' => 'Party sales pagination'])

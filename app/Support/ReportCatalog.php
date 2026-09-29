@@ -32,7 +32,7 @@ final class ReportCatalog
     {
         self::authorize($module);
         $query = match ($module) {
-            'sales' => Access::scope(Sale::query()->with(['customer', 'creator'])
+            'sales' => Access::scope(Sale::query()->where('is_draft', false)->with(['customer', 'creator'])
                 ->withSum(['payments as paid_total' => fn ($q) => $q->where('approval_status', 'approved')], 'amount_rupees'), 'sales'),
             'payments' => Access::scope(SalePayment::query()->whereHas('sale')->with(['sale.customer', 'creator']), 'payments'),
             'stock-entries' => Access::scope(StockEntry::query()->with(['items.product', 'creator']), 'stock-entries'),
@@ -167,19 +167,19 @@ final class ReportCatalog
         $unit = in_array($module, ['stock-entries', 'upcoming-orders'], true) ? ' CTN'
             : ($module === 'attendance' ? ' hours' : '');
         $prefix = $unit === '' ? 'Rs ' : '';
-        return ['label' => $label, 'value' => $prefix.number_format($value, $module === 'salaries' || $module === 'attendance' ? 2 : 0).$unit];
+        return ['label' => $label, 'value' => $prefix.number_format($value, in_array($module, ['salaries', 'attendance', 'sales', 'payments'], true) ? 2 : 0).$unit];
     }
 
     public static function row(string $module, $record): array
     {
         $by = $record->creator?->name ?? '—';
         $approval = ucfirst($record->approval_status ?? 'approved');
-        $rupees = fn ($amount) => number_format((float) $amount, 0, '.', ',');
+        $rupees = fn ($amount) => number_format((float) $amount, 2, '.', ',');
         $paise = fn ($amount) => number_format(((int) $amount) / 100, 2, '.', ',');
         return match ($module) {
             'sales' => [$record->sale_date->format('d M Y'), $record->invoice_no, $record->customer?->name, $record->customer?->mobile,
                 $rupees($record->total_rupees), $rupees($record->paid_total ?? 0),
-                $rupees(max(0, (int) $record->total_rupees - (int) ($record->paid_total ?? 0))), $approval, $by],
+                $rupees(\App\Support\SaleMoney::decimal(max(0, \App\Support\SaleMoney::paise($record->total_rupees) - \App\Support\SaleMoney::paise((string) ($record->paid_total ?? 0))))), $approval, $by],
             'payments' => [$record->payment_date->format('d M Y'), $record->sale?->invoice_no, $record->sale?->customer?->name,
                 ucfirst($record->method), $rupees($record->amount_rupees), $approval, $by],
             'stock-entries' => [$record->entry_date->format('d M Y'), '#'.$record->id,

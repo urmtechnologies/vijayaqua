@@ -43,4 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
         HTMLFormElement.prototype.submit.call(selectedForm);
     });
     dialog?.addEventListener('hidden.bs.modal', () => { selectedForm = null; });
+
+    // Each list table becomes labeled cards on narrow screens, including AJAX-filtered results.
+    const labelTables = () => document.querySelectorAll('.main-content .table-responsive table').forEach(table => {
+        if (table.classList.contains('va-responsive-table')) return;
+        const labels = Array.from(table.querySelectorAll('thead th'), th => th.textContent.trim());
+        if (!labels.length) return;
+        table.classList.add('va-responsive-table');
+        table.querySelectorAll('tbody tr').forEach(row => Array.from(row.children).forEach((cell, index) => {
+            if (cell.tagName === 'TD' && !cell.dataset.label && !cell.hasAttribute('colspan')) cell.dataset.label = labels[index] || '';
+        }));
+    });
+    labelTables();
+    const results = document.querySelector('.main-content');
+    if (results) new MutationObserver(labelTables).observe(results, {childList: true, subtree: true});
 });

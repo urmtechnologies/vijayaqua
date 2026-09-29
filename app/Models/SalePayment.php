@@ -17,7 +17,7 @@ class SalePayment extends Model
 
     protected function casts(): array
     {
-        return ['payment_date' => 'date'];
+        return ['payment_date' => 'date', 'amount_rupees' => 'decimal:2'];
     }
 
     public function sale(): BelongsTo

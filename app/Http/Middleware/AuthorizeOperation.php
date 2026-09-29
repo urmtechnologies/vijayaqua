@@ -29,6 +29,10 @@ class AuthorizeOperation
             default => 'view',
         };
         if ($name === 'sales.show') $action = 'invoice';
+        if (in_array($name, ['sales.index', 'customers.show'], true)
+            && Access::allowed('sales', 'create')) $action = 'create';
+        if (in_array($name, ['sales.edit', 'sales.update'], true)
+            && $request->route('sale')?->is_draft && Access::allowed('sales', 'create')) $action = 'create';
         if ($name === 'customers.lookup') {
             abort_unless(Access::allowed('sales', 'view') || Access::allowed('sales', 'create')
                 || Access::allowed('upcoming-orders', 'create'), 403);
@@ -42,6 +46,9 @@ class AuthorizeOperation
                 // Accounts and customers are shared identities; their lists are scoped by child records.
                 if (in_array($module, ['sales', 'partner-ledger'], true)
                     && in_array($name, ['customers.show', 'partners.show'], true)) break;
+                if (in_array($name, ['sales.edit', 'sales.update'], true) && $record instanceof \App\Models\Sale
+                    && $record->is_draft && Access::allowed('sales', 'create')
+                    && (int) $record->user_id === (int) $request->user()->id) continue;
                 abort_unless(Access::record($module, $action, $record), 403);
             }
         }
