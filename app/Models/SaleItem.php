@@ -9,6 +9,11 @@ class SaleItem extends Model
 {
     protected $fillable = ['product_id', 'product_name', 'cartons', 'rate_rupees', 'line_total_rupees'];
 
+    protected function casts(): array
+    {
+        return ['rate_rupees' => 'decimal:2', 'line_total_rupees' => 'decimal:2'];
+    }
+
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class)->where('approval_status', 'approved');

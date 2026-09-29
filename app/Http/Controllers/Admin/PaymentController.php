@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Access;
 use App\Models\Sale;
 use App\Models\SalePayment;
-use App\Support\RupeeAmount;
+use App\Support\{CustomerWallet, SaleMoney};
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,7 +76,7 @@ class PaymentController extends Controller
             'party' => $sale->customer->name,
             'mobile' => $sale->customer->mobile,
             'sale_date' => $sale->sale_date->format('Y-m-d'),
-            'due' => (int) $sale->total_rupees - (int) ($sale->paid_total ?? 0),
+            'due' => SaleMoney::decimal(max(0, SaleMoney::paise($sale->total_rupees) - SaleMoney::paise((string) ($sale->paid_total ?? 0)))),
             'url' => Access::record('sales', 'invoice', $sale) ? route('sales.show', $sale) : null,
         ]);
     }
@@ -86,35 +86,38 @@ class PaymentController extends Controller
         $data = $request->validate([
             'sale_id' => ['required', 'integer', Rule::exists('sales', 'id')],
             'payment_date' => ['required', 'date_format:Y-m-d'],
-            'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
+            'amount_rupees' => ['required', 'regex:/^(?!(?:0|0\.0{1,2})$)(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/'],
             'method' => ['required', Rule::in(['cash', 'upi', 'bank', 'other'])],
             'reference' => ['nullable', 'string', 'max:150'],
         ]);
-        $amount = RupeeAmount::int($data['amount_rupees'], 'amount_rupees');
+        $amount = SaleMoney::paise($data['amount_rupees'], 'amount_rupees');
 
         $sale = DB::transaction(function () use ($data, $amount): Sale {
             $sale = Sale::whereKey($data['sale_id'])->lockForUpdate()->firstOrFail();
             if ($data['payment_date'] < $sale->sale_date->format('Y-m-d')) {
                 throw ValidationException::withMessages(['payment_date' => 'Payment date cannot be before the sale date.']);
             }
-            $alreadyPaid = (int) $sale->payments()->sum('amount_rupees');
+            $alreadyPaid = SaleMoney::paise((string) $sale->payments()->sum('amount_rupees'));
             abort_unless($sale->approval_status === 'approved'
+                && ! $sale->is_draft
                 && (Access::all('payments') || Access::all('sales') || (int) $sale->user_id === auth()->id()), 403);
-            if ($amount > (int) $sale->total_rupees - $alreadyPaid) {
+            if ($amount > SaleMoney::paise($sale->total_rupees) - $alreadyPaid) {
                 throw ValidationException::withMessages(['amount_rupees' => 'Payment exceeds the remaining due amount.']);
             }
             $sale->payments()->create([
                 'payment_date' => $data['payment_date'],
-                'amount_rupees' => $amount,
+                'amount_rupees' => SaleMoney::decimal($amount),
                 'method' => $data['method'],
                 'reference' => $data['reference'] ?? null,
             ]);
 
+            CustomerWallet::refresh($sale->customer_id);
             return $sale;
         }, 3);
 
-        return redirect()->route(Access::allowed('sales', 'invoice') ? 'sales.show' : 'payments.index',
-            Access::allowed('sales', 'invoice') ? [$sale] : [])->with('success', 'Payment recorded successfully.');
+        return redirect()->route(Access::allowed('sales') || Access::allowed('sales', 'create') ? 'customers.show' : 'payments.index',
+            Access::allowed('sales') || Access::allowed('sales', 'create') ? [$sale->customer_id] : [])
+            ->with('success', 'Payment recorded successfully.');
     }
 
     public function edit(SalePayment $payment): View
@@ -127,7 +130,7 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'payment_date' => ['required', 'date_format:Y-m-d'],
-            'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
+            'amount_rupees' => ['required', 'regex:/^(?!(?:0|0\.0{1,2})$)(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/'],
             'method' => ['required', Rule::in(['cash', 'upi', 'bank', 'other'])],
             'reference' => ['nullable', 'string', 'max:150'],
         ]);
@@ -138,14 +141,17 @@ class PaymentController extends Controller
             if ($data['payment_date'] < $sale->sale_date->format('Y-m-d')) {
                 throw ValidationException::withMessages(['payment_date' => 'Payment date cannot be before the sale date.']);
             }
-            $otherPayments = (int) $sale->payments()->where('id', '!=', $record->id)->sum('amount_rupees');
-            if ((int) $data['amount_rupees'] > (int) $sale->total_rupees - $otherPayments) {
+            $otherPayments = SaleMoney::paise((string) $sale->payments()->where('id', '!=', $record->id)->sum('amount_rupees'));
+            if (SaleMoney::paise($data['amount_rupees']) > SaleMoney::paise($sale->total_rupees) - $otherPayments) {
                 throw ValidationException::withMessages(['amount_rupees' => 'Payment exceeds the remaining invoice balance.']);
             }
             $record->update($data);
+            CustomerWallet::refresh($sale->customer_id);
         }, 3);
 
-        return redirect()->route('payments.index')->with('success', 'Payment updated.');
+        return redirect()->route(Access::allowed('sales') || Access::allowed('sales', 'create') ? 'customers.show' : 'payments.index',
+            Access::allowed('sales') || Access::allowed('sales', 'create') ? [$payment->sale->customer_id] : [])
+            ->with('success', 'Payment updated.');
     }
 
     public function destroy(SalePayment $payment): RedirectResponse
@@ -155,6 +161,7 @@ class PaymentController extends Controller
             $record = SalePayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
             abort_unless(Access::canDelete('payments', $record), 403);
             $record->delete();
+            CustomerWallet::refresh($record->sale->customer_id);
         }, 3);
 
         return back()->with('success', 'Payment removed.');
@@ -162,7 +169,7 @@ class PaymentController extends Controller
 
     private function availableSales(): \Illuminate\Database\Eloquent\Builder
     {
-        $query = Sale::query()->where('approval_status', 'approved');
+        $query = Sale::query()->where('approval_status', 'approved')->where('is_draft', false);
         if (! Access::all('payments') && ! Access::all('sales')) $query->where('user_id', auth()->id());
         return $query;
     }

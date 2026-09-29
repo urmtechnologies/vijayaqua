@@ -65,7 +65,7 @@ class SalesLedgerTest extends TestCase
         $this->post(route('payments.store'), [
             'sale_id' => $first->id, 'payment_date' => '2026-09-27',
             'amount_rupees' => 150, 'method' => 'cash', 'reference' => 'Receipt 1',
-        ])->assertRedirect(route('sales.show', $first));
+        ])->assertRedirect(route('customers.show', $first->customer));
         $this->assertSame(2, $first->payments()->count());
         $this->assertSame(200, (int) $first->payments()->sum('amount_rupees'));
         $this->get(route('customers.show', $first->customer))->assertOk()->assertSee('VA-INV-000001')->assertSee('VA-INV-000002');
@@ -107,7 +107,8 @@ class SalesLedgerTest extends TestCase
         $this->assertSame(10, StockBalance::received($product->id));
         $this->assertSame(3, StockBalance::sold($product->id));
         $this->assertSame(7, StockBalance::available($product->id));
-        $this->get(route('sales.create'))->assertOk()->assertSee('"available":7', false);
+        $sale = Sale::firstOrFail();
+        $this->get(route('sales.edit', $sale))->assertOk()->assertSee('"available":7', false);
 
         $this->post(route('sales.store'), $this->sale($product, 8, 0))
             ->assertSessionHasErrors('items.0.cartons');
@@ -171,30 +172,30 @@ class SalesLedgerTest extends TestCase
         $this->assertSame(0, Sale::count());
     }
 
-    public function test_sale_party_and_payment_date_filters_include_the_selected_day(): void
+    public function test_party_list_and_payment_date_filters_show_the_sale(): void
     {
         $this->actingAs($this->admin());
         $product = Product::create(['name' => '20 Litre Jar', 'status' => 'active']);
         $this->receive($product, 2);
-        $this->get(route('sales.create'))->assertOk()->assertSee('20 Litre Jar');
+        $this->get(route('sales.create'))->assertOk()->assertSee('Party Details');
         $this->post(route('sales.store'), $this->sale($product, 1, 40))->assertRedirect();
         $sale = Sale::firstOrFail();
         $this->get(route('payments.create', ['invoice' => $sale->invoice_no]))
             ->assertOk()->assertSee($sale->invoice_no);
         $this->get(route('payments.lookup', ['invoice' => $sale->invoice_no]))
-            ->assertOk()->assertJsonPath('due', 60);
+            ->assertOk()->assertJsonPath('due', '60.00');
         $this->get(route('customers.lookup', ['mobile' => '9876543210']))
             ->assertOk()->assertJsonPath('found', true);
 
         $this->withHeader('X-Requested-With', 'XMLHttpRequest')
-            ->get(route('sales.index', ['from' => '2026-09-27', 'to' => '2026-09-27']))
-            ->assertOk()->assertSee($sale->invoice_no);
-        $this->get(route('customers.show', $sale->customer, false).'?from=2026-09-27&to=2026-09-27')
+            ->get(route('sales.index', ['search' => '9876543210']))
+            ->assertOk()->assertSee('Aqua Traders');
+        $this->get(route('customers.show', $sale->customer))
             ->assertOk()->assertSee($sale->invoice_no);
         $this->get(route('payments.index', ['from' => '2026-09-27', 'to' => '2026-09-27']))
             ->assertOk()->assertSee($sale->invoice_no);
 
-        $this->get(route('sales.index', ['to' => '2026-09-26']))
-            ->assertOk()->assertSeeText('No invoices found.');
+        $this->get(route('sales.index', ['search' => 'no matching party']))
+            ->assertOk()->assertSeeText('No parties found.');
     }
 }

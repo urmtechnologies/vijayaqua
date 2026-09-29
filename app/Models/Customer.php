@@ -12,6 +12,11 @@ class Customer extends Model
 
     protected $fillable = ['name', 'mobile'];
 
+    protected function casts(): array
+    {
+        return ['total_sales_rupees' => 'decimal:2', 'total_paid_rupees' => 'decimal:2', 'balance_rupees' => 'decimal:2'];
+    }
+
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);

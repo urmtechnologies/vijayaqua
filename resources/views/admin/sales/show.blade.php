@@ -16,9 +16,9 @@
 @endsection
 
 @section('content')
-<p>@include('shared.approval-status', ['record' => $sale])</p>
+<p>@include('admin.sales.partials.status-icon', ['record' => $sale])</p>
 @if($sale->approval_status === 'pending')<div class="alert alert-warning va-no-print">This invoice is waiting for admin approval. Stock and payment totals will update after approval.</div>@endif
-@php $due = (int) $sale->total_rupees - $paid; @endphp
+@php $due = \App\Support\SaleMoney::decimal(max(0, \App\Support\SaleMoney::paise($sale->total_rupees) - \App\Support\SaleMoney::paise($paid))); @endphp
 <div class="card va-invoice">
     <div class="card-body p-4">
         <div class="d-flex justify-content-between flex-wrap gap-2 border-bottom pb-3 mb-4">
@@ -31,6 +31,7 @@
             </div>
             <div class="col-md-6 text-md-end"><small class="text-muted">Recorded by</small><div>{{ $sale->creator?->name ?? 'System' }}</div>
                 @if($sale->updated_by)<div class="small text-muted">Edited by {{ $sale->editor?->name ?? 'System' }}</div>@endif
+                @if($sale->referenceUser)<div>Reference user: {{ $sale->referenceUser->name }}</div>@endif
                 @if($sale->reference)<div>Reference: {{ $sale->reference }}</div>@endif
             </div>
         </div>
@@ -39,19 +40,19 @@
             <tbody>
                 @foreach($sale->items as $item)
                     <tr><td>{{ $item->product_name }}</td><td class="text-end">{{ \App\Support\CartonNumber::format($item->cartons) }}</td>
-                        <td class="text-end">{{ \App\Support\RupeeAmount::format($item->rate_rupees) }}</td>
-                        <td class="text-end">{{ \App\Support\RupeeAmount::format($item->line_total_rupees) }}</td></tr>
+                        <td class="text-end">{{ \App\Support\SaleMoney::format($item->rate_rupees) }}</td>
+                        <td class="text-end">{{ \App\Support\SaleMoney::format($item->line_total_rupees) }}</td></tr>
                 @endforeach
             </tbody>
         </table></div>
         <div class="row justify-content-end"><div class="col-md-5 col-lg-4">
             <div class="va-invoice-total"><span>Subtotal</span><strong>₹{{ \App\Support\RupeeAmount::format($sale->subtotal_rupees) }}</strong></div>
-            <div class="va-invoice-total"><span>Discount</span><strong>− ₹{{ \App\Support\RupeeAmount::format($sale->discount_rupees) }}</strong></div>
-            <div class="va-invoice-total"><span>Vehicle charge</span><strong>₹{{ \App\Support\RupeeAmount::format($sale->vehicle_charge_rupees) }}</strong></div>
+            @if(\App\Support\SaleMoney::paise($sale->discount_rupees) > 0)<div class="va-invoice-total"><span>Historical discount</span><strong>− ₹{{ \App\Support\SaleMoney::format($sale->discount_rupees) }}</strong></div>@endif
+            @if(\App\Support\SaleMoney::paise($sale->vehicle_charge_rupees) > 0)<div class="va-invoice-total"><span>Historical vehicle charge</span><strong>₹{{ \App\Support\SaleMoney::format($sale->vehicle_charge_rupees) }}</strong></div>@endif
             <div class="va-invoice-total va-invoice-final"><span>Invoice total</span><strong>₹{{ \App\Support\RupeeAmount::format($sale->total_rupees) }}</strong></div>
             <div class="va-invoice-total"><span>Paid</span><strong>₹{{ \App\Support\RupeeAmount::format($paid) }}</strong></div>
             <div class="va-invoice-total"><span>Due</span><strong>₹{{ \App\Support\RupeeAmount::format($due) }}</strong></div>
-            @if($due > 0 && $sale->due_date)<div class="text-end small text-muted">Due date: {{ $sale->due_date->format('d M Y') }}</div>@endif
+            @if(\App\Support\SaleMoney::paise($due) > 0 && $sale->due_date)<div class="text-end small text-muted">Due date: {{ $sale->due_date->format('d M Y') }}</div>@endif
         </div></div>
     </div>
 </div>
@@ -59,12 +60,12 @@
 <div class="card mt-3 va-no-print">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h4 class="card-title mb-0">Payments</h4>
-        @if($due > 0 && $sale->approval_status === 'approved' && \App\Support\Access::allowed('payments', 'create'))<a href="{{ route('payments.create', ['invoice' => $sale->invoice_no]) }}" class="btn btn-primary btn-sm">Record Payment</a>@endif
+        @if(\App\Support\SaleMoney::paise($due) > 0 && $sale->approval_status === 'approved' && \App\Support\Access::allowed('payments', 'create'))<a href="{{ route('customers.show', $sale->customer) }}" class="btn btn-primary btn-sm">Record Payment</a>@endif
     </div>
     <div class="card-body">
         @forelse($sale->payments as $payment)
             <div class="d-flex justify-content-between flex-wrap gap-2 border-bottom py-2">
-                <div><strong>{{ $payment->payment_date->format('d M Y') }}</strong><span class="text-muted ms-2">{{ strtoupper($payment->method) }}</span> @include('shared.approval-status', ['record' => $payment])
+                <div><strong>{{ $payment->payment_date->format('d M Y') }}</strong><span class="text-muted ms-2">{{ strtoupper($payment->method) }}</span> @include('admin.sales.partials.status-icon', ['record' => $payment])
                     @if($payment->reference)<div class="text-muted small">Ref: {{ $payment->reference }}</div>@endif
                     <small class="text-muted">Recorded by {{ $payment->creator?->name ?? 'System' }}</small></div>
                 <strong>₹{{ \App\Support\RupeeAmount::format($payment->amount_rupees) }}</strong>
@@ -74,7 +75,7 @@
         @endforelse
     </div>
 </div>
-<div class="mt-3 va-no-print">@if(\App\Support\Access::allowed('sales', 'create'))<a href="{{ route('sales.create', ['mobile' => $sale->customer->mobile]) }}" class="btn btn-outline-primary">New Sale for This Party</a>@endif</div>
+<div class="mt-3 va-no-print"><a href="{{ route('customers.show', $sale->customer) }}" class="btn btn-outline-primary">Party Account</a></div>
 @endsection
 
 @push('styles')<link rel="stylesheet" href="{{ asset('assets/css/sales.css') }}">@endpush

@@ -16,17 +16,24 @@ class Sale extends Model
 
     protected $fillable = [
         'customer_id', 'sale_date', 'subtotal_rupees', 'discount_rupees',
-        'vehicle_charge_rupees', 'total_rupees', 'due_date', 'reference',
+        'vehicle_charge_rupees', 'total_rupees', 'due_date', 'reference', 'reference_user_id', 'is_draft',
     ];
 
     protected function casts(): array
     {
-        return ['sale_date' => 'date', 'due_date' => 'date'];
+        return ['sale_date' => 'date', 'due_date' => 'date', 'is_draft' => 'boolean',
+            'subtotal_rupees' => 'decimal:2', 'discount_rupees' => 'decimal:2',
+            'vehicle_charge_rupees' => 'decimal:2', 'total_rupees' => 'decimal:2'];
     }
 
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function referenceUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reference_user_id')->withTrashed();
     }
 
     public function items(): HasMany

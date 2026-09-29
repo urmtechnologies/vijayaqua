@@ -21,7 +21,7 @@
                 @error('payment_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-sm-6"><label class="form-label" for="paymentAmount">Amount (₹) <span class="text-danger">*</span></label>
-                <input type="number" id="paymentAmount" name="amount_rupees" class="form-control @error('amount_rupees') is-invalid @enderror" min="1" step="1" value="{{ old('amount_rupees') }}" required>
+                <input type="number" id="paymentAmount" name="amount_rupees" class="form-control @error('amount_rupees') is-invalid @enderror" min="0.01" step="0.01" value="{{ old('amount_rupees') }}" required>
                 @error('amount_rupees')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-sm-6"><label class="form-label" for="paymentMethod">Payment Method <span class="text-danger">*</span></label>
