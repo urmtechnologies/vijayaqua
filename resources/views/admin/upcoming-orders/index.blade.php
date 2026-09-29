@@ -2,6 +2,7 @@
 @section('title', 'Upcoming Orders')
 @section('page-title', 'Upcoming Orders')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'upcoming-orders'])
 @if(\App\Support\Access::allowed('upcoming-orders', 'create'))<a href="{{ route('upcoming-orders.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Order</a>@endif
 @endsection
 @section('content')

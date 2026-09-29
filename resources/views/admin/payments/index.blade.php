@@ -3,6 +3,7 @@
 @section('title', 'Payments')
 @section('page-title', 'Payments')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'payments'])
 @if(\App\Support\Access::allowed('payments', 'create'))<a href="{{ route('payments.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Payment</a>@endif
 @endsection
 

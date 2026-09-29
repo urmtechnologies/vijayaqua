@@ -1,7 +1,8 @@
 @extends('layouts.admin')
 @section('title', 'Salary')
 @section('page-title', 'Salary')
-@section('page-action')@if(auth()->user()->role === 'admin')<a href="{{ route('salaries.create') }}" class="btn btn-primary">Generate Salary</a>@endif @endsection
+@section('page-action')
+@include('shared.report-exports', ['reportModule' => 'salaries'])@if(auth()->user()->role === 'admin')<a href="{{ route('salaries.create') }}" class="btn btn-primary">Generate Salary</a>@endif @endsection
 @section('content')
 <div data-ledger-list class="card"><div class="card-header d-flex justify-content-between align-items-center"><h4 class="card-title mb-0">Monthly Salary Records</h4><button type="button" class="btn btn-outline-primary d-md-none" data-bs-toggle="offcanvas" data-bs-target="#ledgerFilters">Filters</button></div>
     <div class="card-body">

@@ -12,7 +12,8 @@ class AuthorizeOperation
     public function handle(Request $request, Closure $next): Response
     {
         $name = $request->route()->getName();
-        if ($name === 'dashboard' || str_starts_with($name, 'password.') || $name === 'logout') return $next($request);
+        if ($name === 'dashboard' || str_starts_with($name, 'password.') || $name === 'logout'
+            || str_starts_with($name, 'reports.')) return $next($request);
 
         if (str_starts_with($name, 'approvals.')) {
             abort_unless($request->user()->role === 'admin', 403);

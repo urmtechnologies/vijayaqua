@@ -3,6 +3,7 @@
     <div class="sidebar-slide h-100"><div id="sidebar-menu"><ul class="left-menu list-unstyled" id="side-menu">
         <li class="menu-title">Workspace</li>
         <li><a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+        @if(\App\Support\ReportCatalog::visible())<li><a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="mdi mdi-chart-box-outline"></i><span>Reports</span></a></li>@endif
         @if(Access::allowed('users'))<li><a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'active' : '' }}"><i class="mdi mdi-account-group-outline"></i><span>Users</span></a></li>@endif
         <li class="menu-title">Modules</li>
         @if(Access::allowed('sales') || Access::allowed('sales', 'create') || Access::allowed('payments') || Access::allowed('payments', 'create'))

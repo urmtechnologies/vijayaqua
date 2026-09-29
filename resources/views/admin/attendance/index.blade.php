@@ -2,6 +2,7 @@
 @section('title', 'Attendance')
 @section('page-title', 'Attendance')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'attendance'])
     @if(\App\Support\Access::allowed('attendance', 'create'))<a href="{{ route('attendance.create') }}" class="btn btn-primary">Add Attendance</a>@endif
 @endsection
 @section('content')

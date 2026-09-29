@@ -3,6 +3,7 @@
 @section('title', 'Expenses')
 @section('page-title', 'Expenses')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'expenses'])
 @if(\App\Support\Access::allowed('expenses', 'create'))<a href="{{ route('expenses.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Expense</a>@endif
 @endsection
 

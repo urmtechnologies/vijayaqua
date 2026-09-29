@@ -2,6 +2,7 @@
 @section('title', 'Partner Ledger')
 @section('page-title', 'Partner Ledger')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'partner-ledger'])
 @if(\App\Support\Access::allowed('partner-ledger', 'create'))<a href="{{ route('partner-ledger.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Entry</a>@endif
 @endsection
 @section('content')

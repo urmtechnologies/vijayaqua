@@ -3,6 +3,7 @@
 @section('title', 'Users')
 @section('page-title', 'Users')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'users'])
     @if(\App\Support\Access::allowed('users', 'create'))<a href="{{ route('users.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> New User</a>@endif
 @endsection
 

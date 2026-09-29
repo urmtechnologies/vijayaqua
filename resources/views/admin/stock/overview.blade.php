@@ -3,6 +3,7 @@
 @section('title', 'Stock Overview')
 @section('page-title', 'Stock Overview')
 @section('page-action')
+@include('shared.report-exports', ['reportModule' => 'stock'])
 @if(\App\Support\Access::allowed('stock-entries', 'create'))<a href="{{ route('stock-entries.create') }}" class="btn btn-primary"><i class="mdi mdi-plus me-1"></i> Add Stock Entry</a>@endif
 @endsection
 

@@ -24,6 +24,7 @@ class ProductController extends Controller
         ]);
 
         $query = Product::query()->with(['creator', 'editor', 'approver']);
+        $query = Access::scope($query, 'products');
         if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
 
         if ($search = trim($filters['search'] ?? '')) {

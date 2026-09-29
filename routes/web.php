@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\UpcomingOrderController;
 use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\SalaryController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\Usercontroller as LoginController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,8 @@ Route::post('/login', [LoginController::class, 'authenticate'])->name('login.sub
 
 Route::middleware(['auth', 'operation'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export/{module}/{format}', [ReportController::class, 'export'])->name('reports.export');
     Route::resource('users', UserController::class)->only(['index', 'store', 'edit', 'update', 'destroy']);
     Route::get('/users/new', [UserController::class, 'create'])->name('users.create');
     Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
