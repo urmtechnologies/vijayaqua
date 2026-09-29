@@ -13,11 +13,11 @@ class SalePayment extends Model
 {
     use TracksCreator, TracksEditor, RequiresApproval, SoftDeletes;
 
-    protected $fillable = ['sale_id', 'payment_date', 'amount_rupees', 'method', 'reference'];
+    protected $fillable = ['sale_id', 'payment_date', 'entry_type', 'amount_rupees', 'method', 'reference'];
 
     protected function casts(): array
     {
-        return ['payment_date' => 'date'];
+        return ['payment_date' => 'date', 'amount_rupees' => 'decimal:2'];
     }
 
     public function sale(): BelongsTo

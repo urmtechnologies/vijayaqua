@@ -90,8 +90,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ count($headings) }}" class="text-center text-muted py-5">No records
-                                        match your filters.</td>
+                                    <td colspan="{{ count($headings) }}" class="text-center text-muted py-5">No records match your filters.</td>
                                 </tr>
                             @endforelse
                         </tbody>

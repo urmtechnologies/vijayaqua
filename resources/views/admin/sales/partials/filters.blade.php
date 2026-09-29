@@ -1,23 +1,4 @@
-<div class="col-12 col-md-3">
-    <label class="form-label">Party, mobile or invoice</label>
-    <input type="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Search sales..." maxlength="100">
-</div>
-<div class="col-6 col-md-2">
-    <label class="form-label">From date</label>
-    <input type="date" name="from" value="{{ request('from') }}" class="form-control">
-</div>
-<div class="col-6 col-md-2">
-    <label class="form-label">To date</label>
-    <input type="date" name="to" value="{{ request('to') }}" class="form-control">
-</div>
-<div class="col-12 col-md-2">
-    <label class="form-label">Payment</label>
-    <select name="status" class="form-select">
-        <option value="">All invoices</option>
-        <option value="paid" @selected(request('status') === 'paid')>Paid</option>
-        <option value="due" @selected(request('status') === 'due')>Due</option>
-    </select>
-</div>
-<div class="col-12 col-md-2"><label class="form-label">Approval</label><select name="approval" class="form-select"><option value="">All</option><option value="approved" @selected(request('approval') === 'approved')>Approved</option><option value="pending" @selected(request('approval') === 'pending')>Pending</option></select></div>
-<div class="col-6 col-md-auto"><button type="submit" class="btn btn-primary w-100">Apply</button></div>
+<div class="col-12 col-md-5"><label for="salesSearch{{ md5($filterUrl ?? 'sales') }}" class="form-label">Invoice, party or mobile</label><input id="salesSearch{{ md5($filterUrl ?? 'sales') }}" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Search sales..."></div>
+<div class="col-12 col-md-3"><label class="form-label">Status</label><select name="approval" class="form-select"><option value="">All</option><option value="pending" @selected(request('approval') === 'pending')>Pending</option><option value="approved" @selected(request('approval') === 'approved')>Approved</option></select></div>
+<div class="col-6 col-md-auto"><button class="btn btn-primary w-100" type="submit">Apply</button></div>
 <div class="col-6 col-md-auto"><a href="{{ $filterUrl }}" class="btn btn-outline-secondary w-100 va-clear-filters">Clear</a></div>

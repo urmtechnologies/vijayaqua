@@ -32,8 +32,9 @@ final class ReportCatalog
     {
         self::authorize($module);
         $query = match ($module) {
-            'sales' => Access::scope(Sale::query()->with(['customer', 'creator'])
-                ->withSum(['payments as paid_total' => fn ($q) => $q->where('approval_status', 'approved')], 'amount_rupees'), 'sales'),
+            'sales' => Access::scope(Sale::query()->where('is_draft', false)->with(['customer', 'creator'])
+                ->withSum(['payments as credit_total' => fn ($q) => $q->where('approval_status', 'approved')->where('entry_type', 'credit')], 'amount_rupees')
+                ->withSum(['payments as debit_total' => fn ($q) => $q->where('approval_status', 'approved')->where('entry_type', 'debit')], 'amount_rupees'), 'sales'),
             'payments' => Access::scope(SalePayment::query()->whereHas('sale')->with(['sale.customer', 'creator']), 'payments'),
             'stock-entries' => Access::scope(StockEntry::query()->with(['items.product', 'creator']), 'stock-entries'),
             'stock' => Product::query()->where('approval_status', 'approved')
@@ -111,7 +112,7 @@ final class ReportCatalog
             $query->whereRaw($balance.(($filters['availability'] === 'available') ? ' > 0' : ' <= 0'));
         }
         if ($module === 'sales' && in_array($filters['status'] ?? null, ['paid', 'due'], true)) {
-            $balance = "sales.total_rupees - (SELECT COALESCE(SUM(amount_rupees),0) FROM sale_payments WHERE sale_payments.sale_id=sales.id AND sale_payments.deleted_at IS NULL AND sale_payments.approval_status='approved')";
+            $balance = "sales.total_rupees - (SELECT COALESCE(SUM(CASE WHEN entry_type='debit' THEN -amount_rupees ELSE amount_rupees END),0) FROM sale_payments WHERE sale_payments.sale_id=sales.id AND sale_payments.deleted_at IS NULL AND sale_payments.approval_status='approved')";
             $query->whereRaw($balance.(($filters['status'] === 'paid') ? ' <= 0' : ' > 0'));
         }
         if ($module === 'salaries' && in_array($filters['status'] ?? null, ['due', 'settled'], true)) {
@@ -132,7 +133,7 @@ final class ReportCatalog
     {
         return match ($module) {
             'sales' => ['Date', 'Invoice', 'Party', 'Mobile', 'Total (Rs)', 'Paid (Rs)', 'Due (Rs)', 'Approval', 'Added by'],
-            'payments' => ['Date', 'Invoice', 'Party', 'Method', 'Amount (Rs)', 'Approval', 'Added by'],
+            'payments' => ['Date', 'Invoice', 'Party', 'Type', 'Method', 'Amount (Rs)', 'Approval', 'Added by'],
             'stock-entries' => ['Date', 'Entry', 'Products / type', 'Cartons', 'Approval', 'Added by'],
             'stock' => ['Product', 'Status', 'Received CTN', 'Sold CTN', 'Available CTN'],
             'expenses' => ['Date', 'Title', 'Category', 'Amount (Rs)', 'Notes', 'Approval', 'Added by'],
@@ -151,7 +152,8 @@ final class ReportCatalog
         if (! in_array($module, ['salaries', 'stock'], true)) $approved->where('approval_status', 'approved');
         [$label, $value] = match ($module) {
             'sales' => ['Approved sales', (float) $approved->sum('total_rupees')],
-            'payments' => ['Approved receipts', (float) $approved->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->sum('amount_rupees')],
+            'payments' => ['Net received', (float) (clone $approved)->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->where('entry_type', 'credit')->sum('amount_rupees')
+                - (float) (clone $approved)->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->where('entry_type', 'debit')->sum('amount_rupees')],
             'expenses' => ['Approved expenses', (float) $approved->sum('amount_rupees')],
             'partner-ledger' => ['Net sent', (float) (clone $approved)->where('type', 'send')->sum('amount_rupees')
                 - (float) (clone $approved)->where('type', 'receive')->sum('amount_rupees')],
@@ -167,21 +169,23 @@ final class ReportCatalog
         $unit = in_array($module, ['stock-entries', 'upcoming-orders'], true) ? ' CTN'
             : ($module === 'attendance' ? ' hours' : '');
         $prefix = $unit === '' ? 'Rs ' : '';
-        return ['label' => $label, 'value' => $prefix.number_format($value, $module === 'salaries' || $module === 'attendance' ? 2 : 0).$unit];
+        return ['label' => $label, 'value' => $prefix.number_format($value, in_array($module, ['salaries', 'attendance', 'sales', 'payments'], true) ? 2 : 0).$unit];
     }
 
     public static function row(string $module, $record): array
     {
         $by = $record->creator?->name ?? '—';
         $approval = ucfirst($record->approval_status ?? 'approved');
-        $rupees = fn ($amount) => number_format((float) $amount, 0, '.', ',');
+        $rupees = fn ($amount) => number_format((float) $amount, 2, '.', ',');
         $paise = fn ($amount) => number_format(((int) $amount) / 100, 2, '.', ',');
+        $paid = \App\Support\SaleMoney::decimal(\App\Support\SaleMoney::paise((string) ($record->credit_total ?? 0))
+            - \App\Support\SaleMoney::paise((string) ($record->debit_total ?? 0)));
         return match ($module) {
             'sales' => [$record->sale_date->format('d M Y'), $record->invoice_no, $record->customer?->name, $record->customer?->mobile,
-                $rupees($record->total_rupees), $rupees($record->paid_total ?? 0),
-                $rupees(max(0, (int) $record->total_rupees - (int) ($record->paid_total ?? 0))), $approval, $by],
+                $rupees($record->total_rupees), $rupees($paid),
+                $rupees(\App\Support\SaleMoney::decimal(max(0, \App\Support\SaleMoney::paise($record->total_rupees) - \App\Support\SaleMoney::paise($paid)))), $approval, $by],
             'payments' => [$record->payment_date->format('d M Y'), $record->sale?->invoice_no, $record->sale?->customer?->name,
-                ucfirst($record->method), $rupees($record->amount_rupees), $approval, $by],
+                ucfirst($record->entry_type), ucfirst($record->method), $rupees($record->amount_rupees), $approval, $by],
             'stock-entries' => [$record->entry_date->format('d M Y'), '#'.$record->id,
                 $record->items->map(fn ($i) => ($i->product?->name ?? 'Product').': '.($i->type ?: 'Not set'))->implode(', '),
                 (string) ($record->carton_total ?? 0), $approval, $by],

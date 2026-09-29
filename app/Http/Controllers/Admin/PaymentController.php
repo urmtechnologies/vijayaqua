@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Access;
 use App\Models\Sale;
 use App\Models\SalePayment;
-use App\Support\RupeeAmount;
+use App\Support\{CustomerWallet, SaleMoney};
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +44,11 @@ class PaymentController extends Controller
         if ($to = $filters['to'] ?? null) $query->whereDate('payment_date', '<=', $to);
         if ($method = $filters['method'] ?? null) $query->where('method', $method);
 
-        $summary = ['count' => (clone $query)->count(), 'received' => (string) (clone $query)->where('approval_status', 'approved')->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'))->sum('amount_rupees')];
+        $approved = (clone $query)->where('approval_status', 'approved')->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'));
+        $summary = ['count' => (clone $query)->count(), 'received' => SaleMoney::decimal(
+            SaleMoney::paise((string) (clone $approved)->where('entry_type', 'credit')->sum('amount_rupees'))
+            - SaleMoney::paise((string) (clone $approved)->where('entry_type', 'debit')->sum('amount_rupees')),
+        )];
         $payments = $query->with(['sale.customer', 'creator', 'editor', 'approver'])
             ->orderByDesc('payment_date')->orderByDesc('id')->paginate(10)->withQueryString();
 
@@ -56,7 +60,7 @@ class PaymentController extends Controller
     public function create(Request $request): View
     {
         $invoice = $request->query('invoice');
-        $sale = is_string($invoice) ? $this->availableSales()->with(['customer'])->withSum(['payments as paid_total' => fn ($q) => $q->where('approval_status', 'approved')], 'amount_rupees')
+        $sale = is_string($invoice) ? $this->availableSales()->with(['customer'])
             ->where('invoice_no', $invoice)->first() : null;
 
         return view('admin.payments.create', compact('sale'));
@@ -65,7 +69,7 @@ class PaymentController extends Controller
     public function lookup(Request $request)
     {
         $data = $request->validate(['invoice' => ['required', 'string', 'max:32']]);
-        $sale = $this->availableSales()->with('customer')->withSum(['payments as paid_total' => fn ($q) => $q->where('approval_status', 'approved')], 'amount_rupees')
+        $sale = $this->availableSales()->with('customer')
             ->where('invoice_no', trim($data['invoice']))->first();
         if (! $sale) return response()->json(['found' => false]);
 
@@ -76,7 +80,7 @@ class PaymentController extends Controller
             'party' => $sale->customer->name,
             'mobile' => $sale->customer->mobile,
             'sale_date' => $sale->sale_date->format('Y-m-d'),
-            'due' => (int) $sale->total_rupees - (int) ($sale->paid_total ?? 0),
+            'due' => SaleMoney::decimal(max(0, SaleMoney::paise($sale->total_rupees) - $sale->netPaidPaise())),
             'url' => Access::record('sales', 'invoice', $sale) ? route('sales.show', $sale) : null,
         ]);
     }
@@ -85,36 +89,44 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'sale_id' => ['required', 'integer', Rule::exists('sales', 'id')],
+            'entry_type' => ['nullable', Rule::in(['credit', 'debit'])],
             'payment_date' => ['required', 'date_format:Y-m-d'],
-            'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
+            'amount_rupees' => ['required', 'regex:/^(?!(?:0|0\.0{1,2})$)(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/'],
             'method' => ['required', Rule::in(['cash', 'upi', 'bank', 'other'])],
             'reference' => ['nullable', 'string', 'max:150'],
         ]);
-        $amount = RupeeAmount::int($data['amount_rupees'], 'amount_rupees');
+        $amount = SaleMoney::paise($data['amount_rupees'], 'amount_rupees');
 
         $sale = DB::transaction(function () use ($data, $amount): Sale {
             $sale = Sale::whereKey($data['sale_id'])->lockForUpdate()->firstOrFail();
             if ($data['payment_date'] < $sale->sale_date->format('Y-m-d')) {
                 throw ValidationException::withMessages(['payment_date' => 'Payment date cannot be before the sale date.']);
             }
-            $alreadyPaid = (int) $sale->payments()->sum('amount_rupees');
+            $entryType = $data['entry_type'] ?? 'credit';
             abort_unless($sale->approval_status === 'approved'
+                && ! $sale->is_draft
                 && (Access::all('payments') || Access::all('sales') || (int) $sale->user_id === auth()->id()), 403);
-            if ($amount > (int) $sale->total_rupees - $alreadyPaid) {
-                throw ValidationException::withMessages(['amount_rupees' => 'Payment exceeds the remaining due amount.']);
+            if ($entryType === 'credit' && $amount > SaleMoney::paise($sale->total_rupees)
+                - max($sale->netPaidPaise(false), $sale->netPaidPaise())) {
+                throw ValidationException::withMessages(['amount_rupees' => 'Credit exceeds the remaining invoice due.']);
+            }
+            $pendingRefunds = SaleMoney::paise((string) $sale->payments()->where('approval_status', 'pending')->where('entry_type', 'debit')->sum('amount_rupees'));
+            if ($entryType === 'debit' && $amount > $sale->netPaidPaise() - $pendingRefunds) {
+                throw ValidationException::withMessages(['amount_rupees' => 'Debit cannot exceed the approved payments received.']);
             }
             $sale->payments()->create([
                 'payment_date' => $data['payment_date'],
-                'amount_rupees' => $amount,
+                'entry_type' => $entryType,
+                'amount_rupees' => SaleMoney::decimal($amount),
                 'method' => $data['method'],
                 'reference' => $data['reference'] ?? null,
             ]);
 
+            CustomerWallet::refresh($sale->customer_id);
             return $sale;
         }, 3);
 
-        return redirect()->route(Access::allowed('sales', 'invoice') ? 'sales.show' : 'payments.index',
-            Access::allowed('sales', 'invoice') ? [$sale] : [])->with('success', 'Payment recorded successfully.');
+        return redirect()->to($this->saleReturnUrl($sale))->with('success', 'Payment entry recorded.');
     }
 
     public function edit(SalePayment $payment): View
@@ -126,8 +138,9 @@ class PaymentController extends Controller
     public function update(Request $request, SalePayment $payment): RedirectResponse
     {
         $data = $request->validate([
+            'entry_type' => ['nullable', Rule::in(['credit', 'debit'])],
             'payment_date' => ['required', 'date_format:Y-m-d'],
-            'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
+            'amount_rupees' => ['required', 'regex:/^(?!(?:0|0\.0{1,2})$)(?:0|[1-9][0-9]{0,12})(?:\.[0-9]{1,2})?$/'],
             'method' => ['required', Rule::in(['cash', 'upi', 'bank', 'other'])],
             'reference' => ['nullable', 'string', 'max:150'],
         ]);
@@ -138,14 +151,27 @@ class PaymentController extends Controller
             if ($data['payment_date'] < $sale->sale_date->format('Y-m-d')) {
                 throw ValidationException::withMessages(['payment_date' => 'Payment date cannot be before the sale date.']);
             }
-            $otherPayments = (int) $sale->payments()->where('id', '!=', $record->id)->sum('amount_rupees');
-            if ((int) $data['amount_rupees'] > (int) $sale->total_rupees - $otherPayments) {
-                throw ValidationException::withMessages(['amount_rupees' => 'Payment exceeds the remaining invoice balance.']);
+            $other = $sale->payments()->where('id', '!=', $record->id);
+            $allCredits = SaleMoney::paise((string) (clone $other)->where('entry_type', 'credit')->sum('amount_rupees'));
+            $allDebits = SaleMoney::paise((string) (clone $other)->where('entry_type', 'debit')->sum('amount_rupees'));
+            $amount = SaleMoney::paise($data['amount_rupees']);
+            $type = $data['entry_type'] ?? $record->entry_type;
+            $approvedNet = SaleMoney::paise((string) (clone $other)->where('approval_status', 'approved')->where('entry_type', 'credit')->sum('amount_rupees'))
+                - SaleMoney::paise((string) (clone $other)->where('approval_status', 'approved')->where('entry_type', 'debit')->sum('amount_rupees'));
+            if ($type === 'credit' && ($amount > SaleMoney::paise($sale->total_rupees) - max($allCredits - $allDebits, $approvedNet)
+                || $amount + $allCredits < $allDebits)) {
+                throw ValidationException::withMessages(['amount_rupees' => 'Credit exceeds the remaining invoice due.']);
             }
-            $record->update($data);
+            $approvedCredits = SaleMoney::paise((string) (clone $other)->where('approval_status', 'approved')->where('entry_type', 'credit')->sum('amount_rupees'));
+            $reservedDebits = SaleMoney::paise((string) (clone $other)->where('entry_type', 'debit')->sum('amount_rupees'));
+            if ($type === 'debit' && $amount > $approvedCredits - $reservedDebits) {
+                throw ValidationException::withMessages(['amount_rupees' => 'Debit cannot exceed the approved payments received.']);
+            }
+            $record->update([...$data, 'entry_type' => $type]);
+            CustomerWallet::refresh($sale->customer_id);
         }, 3);
 
-        return redirect()->route('payments.index')->with('success', 'Payment updated.');
+        return redirect()->to($this->saleReturnUrl($payment->sale))->with('success', 'Payment updated.');
     }
 
     public function destroy(SalePayment $payment): RedirectResponse
@@ -154,7 +180,13 @@ class PaymentController extends Controller
             Sale::whereKey($payment->sale_id)->lockForUpdate()->firstOrFail();
             $record = SalePayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
             abort_unless(Access::canDelete('payments', $record), 403);
+            $netAfterDelete = $record->sale->netPaidPaise(false)
+                + ($record->entry_type === 'debit' ? 1 : -1) * SaleMoney::paise($record->amount_rupees);
+            if ($netAfterDelete < 0 || $netAfterDelete > SaleMoney::paise($record->sale->total_rupees)) {
+                throw ValidationException::withMessages(['payment' => 'This entry cannot be deleted while later entries depend on it.']);
+            }
             $record->delete();
+            CustomerWallet::refresh($record->sale->customer_id);
         }, 3);
 
         return back()->with('success', 'Payment removed.');
@@ -162,8 +194,16 @@ class PaymentController extends Controller
 
     private function availableSales(): \Illuminate\Database\Eloquent\Builder
     {
-        $query = Sale::query()->where('approval_status', 'approved');
+        $query = Sale::query()->where('approval_status', 'approved')->where('is_draft', false);
         if (! Access::all('payments') && ! Access::all('sales')) $query->where('user_id', auth()->id());
         return $query;
+    }
+
+    private function saleReturnUrl(Sale $sale): string
+    {
+        if (Access::all('sales') || (int) $sale->user_id === auth()->id())
+            return route('customers.show', $sale->customer_id).'#payments';
+        if (Access::record('sales', 'invoice', $sale)) return route('sales.show', $sale);
+        return route('sales.index');
     }
 }

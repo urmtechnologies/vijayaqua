@@ -10,6 +10,7 @@
     <form id="paymentForm" action="{{ route('payments.store') }}" method="POST" data-lookup-url="{{ route('payments.lookup') }}">
         @csrf
         <div class="card-body row g-3">
+            <div class="col-sm-6"><label class="form-label" for="paymentType">Entry Type <span class="text-danger">*</span></label><select id="paymentType" name="entry_type" class="form-select" required><option value="credit" @selected(old('entry_type') === 'credit')>Credit (received)</option><option value="debit" @selected(old('entry_type') === 'debit')>Debit (returned)</option></select></div>
             <div class="col-12"><label class="form-label" for="paymentInvoice">Invoice Number <span class="text-danger">*</span></label>
                 <input type="search" id="paymentInvoice" name="invoice" class="form-control" value="{{ old('invoice', $sale?->invoice_no) }}" placeholder="VA-INV-000001" autocomplete="off" required>
                 <input type="hidden" id="paymentSaleId" name="sale_id" value="{{ old('sale_id', $sale?->id) }}">
@@ -21,7 +22,7 @@
                 @error('payment_date')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-sm-6"><label class="form-label" for="paymentAmount">Amount (₹) <span class="text-danger">*</span></label>
-                <input type="number" id="paymentAmount" name="amount_rupees" class="form-control @error('amount_rupees') is-invalid @enderror" min="1" step="1" value="{{ old('amount_rupees') }}" required>
+                <input type="number" id="paymentAmount" name="amount_rupees" class="form-control @error('amount_rupees') is-invalid @enderror" min="0.01" step="0.01" value="{{ old('amount_rupees') }}" required>
                 @error('amount_rupees')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-sm-6"><label class="form-label" for="paymentMethod">Payment Method <span class="text-danger">*</span></label>

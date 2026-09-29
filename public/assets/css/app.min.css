@@ -1275,6 +1275,7 @@ File: Main Css File
 
 .page-content {
   padding: calc(var(--bs-app-header-height) + 16px) 0.9rem 50px 16px;
+
 }
 
 svg {
@@ -7367,3 +7368,12 @@ s .rich-list-append {
   color: var(--bs-danger);
   margin-top: 5px;
 }
+
+
+@media(max-width:767px){
+    .page-content{
+         padding-right: 0px;
+    padding-left: 0px;
+    }
+}
+

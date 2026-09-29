@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\{Attendance, Expense, PartnerTransaction, Product, Sale, SalePayment, StockEntry, UpcomingOrder, User};
 use App\Support\StockBalance;
+use App\Support\{CustomerWallet, SaleMoney};
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,7 @@ class ApprovalController extends Controller
             $query = $model::query()->where('approval_status', 'pending')->with('creator');
             if ($module === 'attendance') $query->with('employee');
             if ($module === 'payments') $query->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'));
+            if ($module === 'sales') $query->where('is_draft', false);
             $groups[$module] = $query->orderBy('created_at')->orderBy('id')
                 ->when($request->filled('module'), fn ($q) => $q->paginate(20)->withQueryString(), fn ($q) => $q->limit(10)->get());
         }
@@ -58,6 +60,7 @@ class ApprovalController extends Controller
             }
 
             if ($module === 'sales') {
+                if ($record->is_draft) throw ValidationException::withMessages(['approval' => 'Add products before approving this sale.']);
                 $items = $record->items()->orderBy('product_id')->get();
                 $products = Product::withTrashed()->whereIn('id', $items->pluck('product_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
                 foreach ($items as $item) {
@@ -72,9 +75,12 @@ class ApprovalController extends Controller
             }
             if ($module === 'payments') {
                 $sale = Sale::whereKey($record->sale_id)->firstOrFail();
-                if ($sale->approval_status !== 'approved'
-                    || (int) $sale->total_rupees - (int) $sale->payments()->where('approval_status', 'approved')->sum('amount_rupees') < (int) $record->amount_rupees) {
-                    throw ValidationException::withMessages(['approval' => 'Invoice is pending or the payment exceeds its due amount.']);
+                $paid = $sale->netPaidPaise();
+                $amount = SaleMoney::paise($record->amount_rupees);
+                if ($sale->approval_status !== 'approved' || $sale->is_draft
+                    || ($record->entry_type === 'credit' && $amount > SaleMoney::paise($sale->total_rupees) - $paid)
+                    || ($record->entry_type === 'debit' && $amount > $paid)) {
+                    throw ValidationException::withMessages(['approval' => 'Invoice is pending or the payment entry exceeds the available balance.']);
                 }
             }
             if ($module === 'attendance' && \App\Models\Salary::query()
@@ -87,7 +93,9 @@ class ApprovalController extends Controller
             if ($module === 'sales') {
                 $record->payments()->where('approval_status', 'pending')->where('user_id', $record->user_id)
                     ->update(['approval_status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now()]);
+                CustomerWallet::refresh($record->customer_id);
             }
+            if ($module === 'payments') CustomerWallet::refresh($record->sale->customer_id);
         }, 3);
 
         return back()->with('success', 'Record approved.');

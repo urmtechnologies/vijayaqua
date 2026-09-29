@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
             saleId.value = data.id;
             amount.max = String(data.due);
             document.getElementById('paymentDate').min = data.sale_date;
-            message(`${data.party} · ${data.mobile} · Due ₹${Number(data.due).toLocaleString('en-US')}`, data.url);
-            if (data.due <= 0) message('This invoice is already fully paid.', data.url);
+            message(`${data.party} · ${data.mobile} · Due ₹${Number(data.due).toLocaleString('en-IN', {minimumFractionDigits: 2})}`, data.url);
+            if (Number(data.due) <= 0) message('This invoice is already fully paid.', data.url);
         } catch (error) {
             if (error.name !== 'AbortError') message('Unable to check invoice. Please retry.');
         }

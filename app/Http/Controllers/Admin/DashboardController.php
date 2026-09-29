@@ -22,17 +22,19 @@ class DashboardController extends Controller
         };
 
         if (Access::allowed('sales')) {
-            $sales = Access::scope(Sale::query(), 'sales')->where('approval_status', 'approved')
+            $sales = Access::scope(Sale::query(), 'sales')->where('is_draft', false)->where('approval_status', 'approved')
                 ->where('sale_date', '>=', $from)->where('sale_date', '<', $next);
-            $add('sales', 'Sales', 'Rs '.number_format((float) (clone $sales)->sum('total_rupees')),
+            $add('sales', 'Sales', 'Rs '.\App\Support\SaleMoney::format((string) (clone $sales)->sum('total_rupees')),
                 number_format((clone $sales)->count()).' approved invoices this month', 'mdi-cart-outline', 'sales.index');
         }
         if (Access::allowed('payments')) {
             $payments = Access::scope(SalePayment::query(), 'payments')->where('approval_status', 'approved')
                 ->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))
                 ->where('payment_date', '>=', $from)->where('payment_date', '<', $next);
-            $add('payments', 'Payments received', 'Rs '.number_format((float) $payments->sum('amount_rupees')),
-                'Approved payments this month', 'mdi-cash-check', 'payments.index');
+            $credit = \App\Support\SaleMoney::paise((string) (clone $payments)->where('entry_type', 'credit')->sum('amount_rupees'));
+            $debit = \App\Support\SaleMoney::paise((string) (clone $payments)->where('entry_type', 'debit')->sum('amount_rupees'));
+            $add('payments', 'Net received', 'Rs '.\App\Support\SaleMoney::format(\App\Support\SaleMoney::decimal($credit - $debit)),
+                'Approved credits minus debits this month', 'mdi-cash-check', 'payments.index');
         }
         if (Access::allowed('stock') && Access::all('stock')) {
             $productIds = Product::query()->where('approval_status', 'approved')->select('id');
@@ -104,7 +106,9 @@ class DashboardController extends Controller
             $pending = 0;
             foreach ([User::class, Product::class, StockEntry::class, Sale::class, SalePayment::class,
                 Expense::class, PartnerTransaction::class, UpcomingOrder::class, Attendance::class] as $model) {
-                $pending += $model::query()->where('approval_status', 'pending')->count();
+                $query = $model::query()->where('approval_status', 'pending');
+                if ($model === Sale::class) $query->where('is_draft', false);
+                $pending += $query->count();
             }
         }
         return view('admin.dashboard', [
