@@ -241,4 +241,82 @@ class PermissionsAttendanceSalaryTest extends TestCase
         $this->assertSame(150000, SalaryMath::balance($later));
         $this->assertSame(0, SalaryMath::before($staff->id, $laterMonth.'-01'));
     }
+
+    public function test_leave_and_salary_have_separate_pages_and_all_staff_leave_keeps_existing_entries(): void
+    {
+        $admin = $this->person('admin', '9999999999');
+        $first = $this->person('staff', '9876543210');
+        $second = $this->person('staff', '9876543211');
+        $third = $this->person('staff', '9876543212');
+        $day = now()->startOfMonth()->subMonth()->toDateString();
+        $this->actingAs($admin)->post('/attendance', [
+            'employee_id' => $first->id, 'work_date' => $day, 'type' => 'full',
+        ])->assertRedirect();
+        Salary::create(['employee_id' => $second->id, 'month' => substr($day, 0, 7).'-01',
+            'monthly_salary_paise' => 1200000, 'earned_paise' => 0]);
+
+        $this->get('/attendance')->assertOk()->assertSeeText('Mark Leave')->assertSeeText('Add Salary')
+            ->assertDontSeeText('Salary & wallet');
+        $this->get('/attendance/mark-leave')->assertOk()->assertSeeText('All approved staff');
+        $this->post('/attendance/leave', [
+            'scope' => 'all', 'work_date' => $day, 'note' => 'Office closed',
+        ])->assertRedirect('/attendance?month='.substr($day, 0, 7));
+        $this->assertDatabaseHas('attendances', ['employee_id' => $first->id, 'work_date' => $day, 'type' => 'full']);
+        $this->assertDatabaseMissing('attendances', ['employee_id' => $second->id, 'work_date' => $day]);
+        $this->assertDatabaseHas('attendances', ['employee_id' => $third->id, 'work_date' => $day,
+            'type' => 'leave', 'note' => 'Office closed']);
+        $this->post('/attendance/leave', [
+            'scope' => 'one', 'employee_id' => $first->id, 'work_date' => $day, 'note' => 'Do not replace',
+        ])->assertSessionHasErrors('work_date');
+        $this->grant($first, 'attendance');
+        $this->actingAs($first)->get('/attendance/mark-leave')->assertForbidden();
+        $this->post('/attendance/leave', [
+            'scope' => 'all', 'work_date' => $day, 'note' => 'Unauthorized',
+        ])->assertForbidden();
+    }
+
+    public function test_salary_balance_in_users_matches_generation_credit_debit_and_payments(): void
+    {
+        $admin = $this->person('admin', '9999999999');
+        $staff = $this->person('staff', '9876543210');
+        $month = now()->startOfMonth()->subMonth()->format('Y-m');
+        $date = $month.'-01';
+        $this->actingAs($admin);
+        $this->post('/attendance', ['employee_id' => $staff->id, 'work_date' => $date, 'type' => 'full'])
+            ->assertRedirect();
+        $this->get('/salaries/create?employee_id='.$staff->id.'&month='.$month)
+            ->assertOk()->assertSeeText('Salary & wallet')->assertSeeText('Payment history');
+
+        $entry = ['employee_id' => $staff->id, 'month' => $month, 'paid_on' => today()->toDateString(),
+            'method' => 'cash', 'note' => 'Salary cash'];
+        $this->post('/salaries/advances', $entry + ['amount_rupees' => '100.25', 'entry_type' => 'credit'])
+            ->assertRedirect();
+        $this->assertSame(-10025, $staff->fresh()->salary_balance_paise);
+        $this->get('/salaries/create?employee_id='.$staff->id.'&month='.$month)
+            ->assertSeeText('Salary cash')->assertSeeText('Added by '.$admin->name);
+        $this->post('/salaries/advances', $entry + ['amount_rupees' => '25.10', 'entry_type' => 'debit'])
+            ->assertRedirect();
+        $this->assertSame(-7515, $staff->fresh()->salary_balance_paise);
+        $this->post('/salaries', ['employee_id' => $staff->id, 'month' => $month])
+            ->assertRedirect('/salaries/create?month='.$month.'&employee_id='.$staff->id);
+        $salary = Salary::firstOrFail();
+        $this->assertSame(SalaryMath::wallet($staff->id)['balance'], $staff->fresh()->salary_balance_paise);
+        $this->post('/salaries/'.$salary->id.'/payments', [
+            'paid_on' => today()->toDateString(), 'amount_rupees' => '50.50', 'method' => 'upi',
+        ])->assertRedirect();
+        $balance = SalaryMath::wallet($staff->id)['balance'];
+        $this->assertSame($balance, $staff->fresh()->salary_balance_paise);
+        $this->assertSame($balance, SalaryMath::wallets([$staff->id])[$staff->id]['balance']);
+
+        // A new ungenerated month must not change the wallet amount on the calendar.
+        $this->post('/attendance', ['employee_id' => $staff->id,
+            'work_date' => today()->toDateString(), 'type' => 'full'])->assertRedirect();
+        $display = '₹'.SalaryMath::format(abs($balance));
+        $this->get('/attendance')->assertOk()->assertSeeText('Wallet balance · all months')
+            ->assertSeeText($display)->assertDontSeeText('Estimated balance');
+        $this->get('/salaries/create?employee_id='.$staff->id.'&month='.$month)
+            ->assertOk()->assertSeeText('Wallet balance · all months')->assertSeeText($display);
+        $this->get('/users')->assertOk()->assertSeeText('Wallet balance')->assertSeeText($display);
+        $this->get('/salaries')->assertOk()->assertSeeText('Wallet balance')->assertSeeText($display);
+    }
 }

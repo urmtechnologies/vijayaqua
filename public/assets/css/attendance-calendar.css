@@ -1,6 +1,8 @@
 .va-staff-workspace { --staff-line: #e8edf4; --staff-ink: #203044; --staff-muted: #748398; min-width: 0; color: var(--staff-ink); }
 .va-staff-workspace .card { box-shadow: 0 3px 18px rgba(31, 54, 85, .045); border: 1px solid var(--staff-line); border-radius: 16px; }
 .va-staff-panel { margin-bottom: 16px; }
+.va-staff-page-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.va-staff-page-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .va-staff-panel .card-body { padding: 20px 22px; }
 .va-staff-section-heading, .va-staff-calendar-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .va-staff-section-heading h5, .va-staff-calendar-top h5 { font-size: 20px; margin: 2px 0 3px; font-weight: 700; }
@@ -14,22 +16,24 @@
 .va-staff-wallet-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
 .va-staff-wallet-name strong { font-size: 18px; }
 .va-staff-wallet-name span { color: var(--staff-muted); font-size: 12px; }
-.va-staff-wallet-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 14px 0; border-top: 1px solid var(--staff-line); border-bottom: 1px solid var(--staff-line); }
-.va-staff-wallet-metrics > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0 15px; border-right: 1px solid var(--staff-line); }
-.va-staff-wallet-metrics > div:first-child { padding-left: 0; }
-.va-staff-wallet-metrics > div:last-child { border: 0; }
-.va-staff-wallet-metrics small, .va-staff-month-overview small, .va-staff-salary-strip small { font-size: 11px; color: var(--staff-muted); }
-.va-staff-wallet-metrics strong { font-size: 18px; overflow-wrap: anywhere; }
-.va-staff-month-overview { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 16px; }
-.va-staff-month-overview > div { display: flex; flex-direction: column; min-width: 120px; }
-.va-staff-month-overview strong { font-size: 14px; }
+.va-staff-wallet-overview { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px 28px; padding: 16px 0; border-top: 1px solid var(--staff-line); border-bottom: 1px solid var(--staff-line); }
+.va-staff-wallet-main { display: flex; flex-direction: column; gap: 2px; }
+.va-staff-wallet-main small, .va-staff-month-overview small, .va-staff-salary-strip small { font-size: 11px; color: var(--staff-muted); }
+.va-staff-wallet-main > strong { font-size: 27px; line-height: 1.2; overflow-wrap: anywhere; }
+.va-staff-wallet-main > span, .va-staff-month-overview span { font-size: 11px; color: var(--staff-muted); }
+.va-staff-wallet-details { display: flex; flex-wrap: wrap; gap: 7px 16px; font-size: 12px; color: var(--staff-muted); }
+.va-staff-wallet-details > span { display: flex; flex-direction: column; }
+.va-staff-wallet-details strong { color: var(--staff-ink); font-size: 13px; }
+.va-staff-month-overview { margin-top: 15px; }
+.va-staff-month-overview > div { display: flex; flex-direction: column; gap: 2px; }
+.va-staff-month-overview strong { font-size: 16px; }
 .va-staff-wallet-actions { margin-top: 16px; }
 .va-staff-generated { display: inline-block; color: #12745a; background: #e8f8f0; border-radius: 8px; padding: 8px 11px; font-size: 12px; font-weight: 700; }
 .va-staff-payment-form { margin-top: 16px; padding: 15px 0; border-top: 1px solid var(--staff-line); }
 .va-staff-history-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 14px; margin: 10px 0 2px; }
 .va-staff-history-heading h6 { margin: 0; font-weight: 700; }
 .va-staff-history-heading small { color: var(--staff-muted); }
-.va-staff-history { max-height: 320px; overflow-y: auto; }
+.va-staff-history { min-width: 0; }
 .va-staff-transaction { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--staff-line); }
 .va-staff-transaction:last-child { border-bottom: 0; }
 .va-staff-transaction-main { display: flex; gap: 10px; align-items: center; min-width: 0; }
@@ -86,15 +90,15 @@ a.va-staff-day:hover, a.va-staff-day:focus-visible { color: #234268; outline: 2p
 .va-staff-leave-notes > strong { color: #bd5a64; }
 .va-staff-leave-notes > div { display: flex; gap: 9px; min-width: 0; overflow-wrap: anywhere; }
 .va-staff-leave-notes time { flex: 0 0 auto; color: #ad6871; font-weight: 700; }
-.va-staff-salary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--staff-line); }
+.va-staff-salary-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--staff-line); }
 .va-staff-salary-strip > div { min-width: 0; display: flex; flex-direction: column; }
-.va-staff-salary-strip strong { font-size: 13px; overflow-wrap: anywhere; }
+.va-staff-salary-strip strong { font-size: 15px; overflow-wrap: anywhere; }
+.va-staff-wallet-link { grid-column: 1 / -1; font-size: 12px; font-weight: 700; text-decoration: none; }
 @media (max-width: 767px) {
+    .va-staff-page-actions .btn { flex: 1 1 140px; }
     .va-staff-panel .card-body { padding: 16px; }
     .va-staff-calendar-card { padding: 12px; }
-    .va-staff-wallet-metrics, .va-staff-salary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 0; }
-    .va-staff-wallet-metrics > div { padding: 0 8px 0 0; border: 0; }
-    .va-staff-wallet-metrics strong { font-size: 15px; }
+    .va-staff-wallet-main > strong { font-size: 24px; }
     .va-staff-month-controls { gap: 7px; }
     .va-staff-month-input { order: 2; width: calc(100% - 54px); margin: 0; }
     .va-staff-month-controls > button { order: 3; }

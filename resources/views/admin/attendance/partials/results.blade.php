@@ -27,7 +27,14 @@
             @endfor
         </div>
         @if($staffRecords->where('type', 'leave')->isNotEmpty())<div class="va-staff-leave-notes"><strong>Leave notes</strong>@foreach($staffRecords->where('type', 'leave')->sortBy('work_date') as $leave)<div><time datetime="{{ $leave->work_date->toDateString() }}">{{ $leave->work_date->format('d M') }}</time><span>{{ $leave->note ?: 'Leave' }}{{ $leave->approval_status === 'pending' ? ' · Pending approval' : '' }}</span></div>@endforeach</div>@endif
-        @if($stats)<div class="va-staff-salary-strip"><div><small>Monthly rate</small><strong>₹{{ \App\Support\SalaryMath::format($stats['rate']) }}</strong></div><div><small>{{ $stats['run'] ? 'Salary generated' : 'Earned so far' }}</small><strong>₹{{ \App\Support\SalaryMath::format($stats['earned']) }}</strong></div><div><small>Paid / returned</small><strong>{{ $stats['paid'] < 0 ? '−' : '' }}₹{{ \App\Support\SalaryMath::format(abs($stats['paid'])) }}</strong></div><div><small>{{ $stats['run'] ? 'Month balance' : 'Estimated balance' }}</small><strong class="{{ $stats['due'] > 0 ? 'text-danger' : 'text-success' }}">{{ $stats['due'] < 0 ? '−' : '' }}₹{{ \App\Support\SalaryMath::format(abs($stats['due'])) }}</strong></div></div>@endif
+        @if($stats)
+            @php $balance = $stats['wallet']['balance']; @endphp
+            <div class="va-staff-salary-strip">
+                <div><small>{{ $start->format('M Y') }} {{ $stats['run'] ? 'salary' : 'earned so far' }}</small><strong>₹{{ \App\Support\SalaryMath::format($stats['earned']) }}</strong></div>
+                <div><small>Wallet balance · all months</small><strong class="{{ $balance > 0 ? 'text-danger' : 'text-success' }}">{{ $balance < 0 ? '−' : '' }}₹{{ \App\Support\SalaryMath::format(abs($balance)) }}</strong></div>
+                @if(auth()->user()->role === 'admin')<a href="{{ route('salaries.create', ['employee_id' => $employee->id, 'month' => $month]) }}" class="va-staff-wallet-link">Open wallet →</a>@endif
+            </div>
+        @endif
     </article>
 @empty
     <div class="card"><div class="card-body text-center text-muted py-5">No staff found for this month.</div></div>

@@ -9,7 +9,7 @@
         @if(Access::allowed('sales') || Access::allowed('sales', 'create'))
         <li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'active' : '' }}"><i class="ri-shopping-bag-3-line"></i><span>Sales</span></a></li>@endif
         @if(Access::allowed('upcoming-orders'))<li><a href="{{ route('upcoming-orders.index') }}" class="{{ request()->routeIs('upcoming-orders.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-clock-outline"></i><span>Upcoming Orders</span></a></li>@endif
-        @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*', 'salaries.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Attendance & Salary</span></a></li>@endif
+        @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*', 'salaries.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Staff Calendar</span></a></li>@endif
         @if(Access::allowed('stock-entries') || Access::allowed('stock-entries', 'create') || (Access::allowed('stock') && Access::all('stock')))
         <li class="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'mm-active' : '' }}">
             <a href="#stock-submenu" class="has-arrow va-menu-toggle" aria-expanded="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'true' : 'false' }}" aria-controls="stock-submenu"><i class="mdi mdi-package-variant-closed"></i><span>Stock Management</span></a>

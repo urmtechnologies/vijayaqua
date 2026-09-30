@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, Salary, SalaryAdvance, User};
-use App\Support\{Access, SalaryMath};
+use App\Models\{Attendance, Salary, SalaryAdvance, SalaryPayment, User};
+use App\Support\{Access, SalaryMath, SalaryWallet};
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -28,28 +28,60 @@ class SalaryController extends Controller
             $query->whereHas('employee', fn ($q) => $q->where('name', 'like', '%'.$search.'%')->orWhere('mobile', 'like', '%'.$search.'%'));
         }
         if ($month = $filters['month'] ?? null) $query->whereDate('month', $month.'-01');
-        // The balance includes all generated months through this run and every advance through that month.
-        $balance = '(SELECT COALESCE(SUM(s2.earned_paise),0) FROM salaries s2 WHERE s2.employee_id=salaries.employee_id AND s2.month<=salaries.month)'
-            .' - (SELECT COALESCE(SUM(CASE WHEN a.entry_type = \'debit\' THEN -a.amount_paise ELSE a.amount_paise END),0) FROM salary_advances a WHERE a.employee_id=salaries.employee_id AND a.month<=salaries.month)'
-            .' - (SELECT COALESCE(SUM(p.amount_paise),0) FROM salary_payments p JOIN salaries s3 ON s3.id=p.salary_id WHERE s3.employee_id=salaries.employee_id AND s3.month<=salaries.month)';
+        // The list shows the same overall wallet balance as the staff calendar and wallet page.
+        $balance = '(SELECT COALESCE(SUM(s2.earned_paise),0) FROM salaries s2 WHERE s2.employee_id=salaries.employee_id)'
+            .' - (SELECT COALESCE(SUM(CASE WHEN a.entry_type = \'debit\' THEN -CAST(a.amount_paise AS SIGNED) ELSE CAST(a.amount_paise AS SIGNED) END),0) FROM salary_advances a WHERE a.employee_id=salaries.employee_id)'
+            .' - (SELECT COALESCE(SUM(p.amount_paise),0) FROM salary_payments p JOIN salaries s3 ON s3.id=p.salary_id WHERE s3.employee_id=salaries.employee_id)';
         if (($filters['status'] ?? null) === 'due') $query->whereRaw($balance.' > 0');
         if (($filters['status'] ?? null) === 'settled') $query->whereRaw($balance.' <= 0');
 
         $salaries = $query->with(['employee', 'creator'])->orderByDesc('month')->orderByDesc('id')->paginate(10)->withQueryString();
-        $balances = $salaries->getCollection()->mapWithKeys(fn ($run) => [$run->id => SalaryMath::balance($run) + SalaryMath::before($run->employee_id, $run->month->format('Y-m-d'))]);
+        $wallets = SalaryMath::wallets($salaries->pluck('employee_id'));
 
         return $request->ajax()
-            ? view('admin.salaries.partials.results', compact('salaries', 'balances'))
-            : view('admin.salaries.index', compact('salaries', 'balances'));
+            ? view('admin.salaries.partials.results', compact('salaries', 'wallets'))
+            : view('admin.salaries.index', compact('salaries', 'wallets'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $this->admin();
-        return view('admin.salaries.create', [
-            'employees' => User::where('role', '!=', 'admin')->where('approval_status', 'approved')->orderBy('name')->get(['id', 'name', 'mobile', 'salary']),
-            'defaultMonth' => now()->startOfMonth()->subMonth()->format('Y-m'),
+        $filters = $request->validate([
+            'employee_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($q) => $q->where('role', '!=', 'admin')->where('approval_status', 'approved'))],
+            'month' => ['nullable', 'date_format:Y-m'],
         ]);
+        $staffOptions = User::where('role', '!=', 'admin')->where('approval_status', 'approved')
+            ->orderBy('name')->get(['id', 'name', 'mobile', 'salary', 'salary_balance_paise']);
+        $month = $filters['month'] ?? now()->startOfMonth()->subMonth()->format('Y-m');
+        $start = Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
+        $selectedEmployee = isset($filters['employee_id'])
+            ? $staffOptions->firstWhere('id', (int) $filters['employee_id']) : $staffOptions->first();
+        $wallet = null;
+        $history = collect();
+        $monthly = [];
+        if ($selectedEmployee) {
+            $id = $selectedEmployee->id;
+            $wallet = SalaryMath::wallet($id);
+            $calculation = $this->calculation($id, $month);
+            $monthly[$id] = [
+                'run' => $calculation['existing'], 'rate' => $calculation['monthlyPaise'],
+                'earned' => $calculation['earned'], 'pending' => $calculation['pendingCount'],
+            ];
+            $advances = SalaryAdvance::where('employee_id', $id)->with('creator')->get();
+            $payments = SalaryPayment::whereHas('salary', fn ($q) => $q->where('employee_id', $id))
+                ->with(['creator', 'salary'])->get();
+            $history = $advances->map(fn ($entry) => [
+                'date' => $entry->paid_on, 'type' => $entry->entry_type, 'amount' => $entry->amount_paise,
+                'method' => $entry->method, 'note' => $entry->note, 'creator' => $entry->creator?->name,
+                'month' => $entry->month->format('M Y'), 'id' => $entry->id,
+            ])->concat($payments->map(fn ($entry) => [
+                'date' => $entry->paid_on, 'type' => 'credit', 'amount' => $entry->amount_paise,
+                'method' => $entry->method, 'note' => $entry->note, 'creator' => $entry->creator?->name,
+                'month' => $entry->salary->month->format('M Y'), 'id' => $entry->id,
+            ]))->sortByDesc(fn ($entry) => $entry['date']->format('Y-m-d').' '.str_pad((string) $entry['id'], 12, '0', STR_PAD_LEFT))->values();
+        }
+
+        return view('admin.salaries.create', compact('staffOptions', 'selectedEmployee', 'wallet', 'history', 'monthly', 'month', 'start'));
     }
 
     public function preview(Request $request): View
@@ -72,14 +104,16 @@ class SalaryController extends Controller
             if ($calculation['pendingCount']) {
                 throw ValidationException::withMessages(['month' => 'Review pending attendance before generating this salary.']);
             }
-            return Salary::create([
+            $salary = Salary::create([
                 'employee_id' => $data['employee_id'], 'month' => $data['month'].'-01',
                 'monthly_salary_paise' => $calculation['monthlyPaise'],
                 'earned_paise' => $calculation['earned'],
             ]);
+            SalaryWallet::refresh($data['employee_id']);
+            return $salary;
         }, 3);
 
-        return redirect()->route('attendance.index', ['month' => $data['month'], 'employee_id' => $salary->employee_id])
+        return redirect()->route('salaries.create', ['month' => $data['month'], 'employee_id' => $salary->employee_id])
             ->with('success', 'Monthly salary generated. Attendance for this month is locked.');
     }
 
@@ -125,6 +159,7 @@ class SalaryController extends Controller
                 'paid_on' => $data['paid_on'], 'amount_paise' => $amount, 'entry_type' => $type,
                 'method' => $data['method'], 'note' => $data['note'] ?? null,
             ]);
+            SalaryWallet::refresh($data['employee_id']);
         }, 3);
 
         return back()->with('success', ($data['entry_type'] ?? 'credit') === 'debit' ? 'Returned payment recorded.' : 'Salary payment recorded.');
@@ -159,6 +194,7 @@ class SalaryController extends Controller
                 if (! $remaining) break;
             }
             if ($remaining) throw ValidationException::withMessages(['amount_rupees' => 'No open salary amount remains for this payment.']);
+            SalaryWallet::refresh($run->employee_id);
         }, 3);
 
         return redirect()->route('salaries.show', $salary)->with('success', 'Salary payment recorded. Older unpaid months were covered first.');

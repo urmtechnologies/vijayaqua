@@ -63,6 +63,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'salary' => 'decimal:2',
+            'salary_balance_paise' => 'integer',
         ];
     }
 }

@@ -44,6 +44,7 @@ Route::middleware(['auth', 'operation'])->group(function () {
     Route::resource('upcoming-orders', UpcomingOrderController::class)
         ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+    Route::get('/attendance/mark-leave', [AttendanceController::class, 'leaveCreate'])->name('attendance.leave.create');
     Route::post('/attendance/leave', [AttendanceController::class, 'markLeave'])->name('attendance.leave');
     Route::resource('attendance', AttendanceController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     Route::get('/salaries/preview', [SalaryController::class, 'preview'])->name('salaries.preview');

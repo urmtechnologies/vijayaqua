@@ -47,17 +47,37 @@ final class SalaryMath
 
     public static function wallet(int $employeeId): array
     {
-        $entries = SalaryAdvance::where('employee_id', $employeeId);
-        $earned = (int) Salary::where('employee_id', $employeeId)->sum('earned_paise');
-        $credits = (int) (clone $entries)->where('entry_type', 'credit')->sum('amount_paise');
-        $returns = (int) (clone $entries)->where('entry_type', 'debit')->sum('amount_paise');
-        $salaryPayments = (int) SalaryPayment::whereIn('salary_id', Salary::where('employee_id', $employeeId)->select('id'))->sum('amount_paise');
+        return self::wallets([$employeeId])[$employeeId];
+    }
 
-        return [
-            'earned' => $earned,
-            'paid' => $credits + $salaryPayments,
-            'returned' => $returns,
-            'balance' => $earned - $credits - $salaryPayments + $returns,
-        ];
+    public static function wallets(iterable $employeeIds): array
+    {
+        $ids = collect($employeeIds)->map(fn ($id) => (int) $id)->unique()->values()->all();
+        if (! $ids) return [];
+
+        $earned = Salary::whereIn('employee_id', $ids)
+            ->selectRaw('employee_id, SUM(earned_paise) AS amount')->groupBy('employee_id')
+            ->pluck('amount', 'employee_id');
+        $entries = SalaryAdvance::whereIn('employee_id', $ids)
+            ->selectRaw("employee_id, SUM(CASE WHEN entry_type = 'credit' THEN amount_paise ELSE 0 END) AS credits, SUM(CASE WHEN entry_type = 'debit' THEN amount_paise ELSE 0 END) AS returns")
+            ->groupBy('employee_id')->get()->keyBy('employee_id');
+        $payments = SalaryPayment::join('salaries', 'salaries.id', '=', 'salary_payments.salary_id')
+            ->whereIn('salaries.employee_id', $ids)
+            ->selectRaw('salaries.employee_id AS employee_id, SUM(salary_payments.amount_paise) AS amount')
+            ->groupBy('salaries.employee_id')->pluck('amount', 'employee_id');
+
+        $wallets = [];
+        foreach ($ids as $id) {
+            $salary = (int) ($earned[$id] ?? 0);
+            $entry = $entries->get($id);
+            $paid = (int) ($entry?->credits ?? 0) + (int) ($payments[$id] ?? 0);
+            $returned = (int) ($entry?->returns ?? 0);
+            $wallets[$id] = [
+                'earned' => $salary, 'paid' => $paid, 'returned' => $returned,
+                'balance' => $salary - $paid + $returned,
+            ];
+        }
+
+        return $wallets;
     }
 }
