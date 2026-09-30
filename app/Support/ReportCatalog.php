@@ -41,8 +41,7 @@ final class ReportCatalog
                 ->withSum('items as carton_total', 'cartons'), 'vehicle-entries'),
             'stock-entries' => Access::scope(StockEntry::query()->with(['items.product', 'creator']), 'stock-entries'),
             'stock' => Product::query()->where('approval_status', 'approved')
-                ->withSum('stockItems as stock_received', 'cartons')->withSum('soldItems as stock_sold', 'cartons')
-                ->withSum('vehicleItems as stock_dispatched', 'cartons'),
+                ->withSum('stockItems as stock_received', 'cartons')->withSum('soldItems as stock_sold', 'cartons'),
             'expenses' => Access::scope(Expense::query()->with(['category', 'creator']), 'expenses'),
             'partner-ledger' => Access::scope(PartnerTransaction::query()->with(['partner', 'creator']), 'partner-ledger'),
             'upcoming-orders' => Access::scope(UpcomingOrder::query()->with(['customer', 'creator'])->withSum('items as carton_total', 'cartons'), 'upcoming-orders'),
@@ -114,7 +113,7 @@ final class ReportCatalog
             $query->where('status', $filters['status']);
         }
         if ($module === 'stock' && ($filters['availability'] ?? null)) {
-            $balance = "(SELECT COALESCE(SUM(i.cartons),0) FROM stock_entry_items i JOIN stock_entries e ON e.id=i.stock_entry_id AND e.deleted_at IS NULL AND e.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM sale_items i JOIN sales s ON s.id=i.sale_id AND s.deleted_at IS NULL AND s.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM vehicle_entry_items i JOIN vehicle_entries v ON v.id=i.vehicle_entry_id AND v.deleted_at IS NULL AND v.approval_status='approved' WHERE i.product_id=products.id)";
+            $balance = "(SELECT COALESCE(SUM(i.cartons),0) FROM stock_entry_items i JOIN stock_entries e ON e.id=i.stock_entry_id AND e.deleted_at IS NULL AND e.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM sale_items i JOIN sales s ON s.id=i.sale_id AND s.deleted_at IS NULL AND s.approval_status='approved' WHERE i.product_id=products.id)";
             $query->whereRaw($balance.(($filters['availability'] === 'available') ? ' > 0' : ' <= 0'));
         }
         if ($module === 'sales' && in_array($filters['status'] ?? null, ['paid', 'due'], true)) {
@@ -142,7 +141,7 @@ final class ReportCatalog
             'payments' => ['Date', 'Invoice', 'Party', 'Type', 'Method', 'Amount (Rs)', 'Approval', 'Added by'],
             'vehicle-entries' => ['Date', 'Reference user', 'From', 'To', 'Cartons', 'Amount (Rs)', 'Approval', 'Added by'],
             'stock-entries' => ['Date', 'Entry', 'Products / type', 'Cartons', 'Approval', 'Added by'],
-            'stock' => ['Product', 'Status', 'Received CTN', 'Sold CTN', 'Vehicle CTN', 'Available CTN'],
+            'stock' => ['Product', 'Status', 'Received CTN', 'Sold CTN', 'Available CTN'],
             'expenses' => ['Date', 'Title', 'Category', 'Amount (Rs)', 'Notes', 'Approval', 'Added by'],
             'partner-ledger' => ['Date', 'Partner', 'Type', 'Amount (Rs)', 'Note', 'Approval', 'Added by'],
             'upcoming-orders' => ['Date', 'Customer', 'Mobile', 'Cartons', 'Note', 'Approval', 'Added by'],
@@ -201,8 +200,7 @@ final class ReportCatalog
                 $record->items->map(fn ($i) => ($i->product?->name ?? 'Product').': '.($i->type ?: 'Not set'))->implode(', '),
                 (string) ($record->carton_total ?? 0), $approval, $by],
             'stock' => [$record->name, ucfirst($record->status), (string) ($record->stock_received ?? 0),
-                (string) ($record->stock_sold ?? 0), (string) ($record->stock_dispatched ?? 0),
-                (string) ((int) ($record->stock_received ?? 0) - (int) ($record->stock_sold ?? 0) - (int) ($record->stock_dispatched ?? 0))],
+                (string) ($record->stock_sold ?? 0), (string) ((int) ($record->stock_received ?? 0) - (int) ($record->stock_sold ?? 0))],
             'expenses' => [$record->expense_date->format('d M Y'), $record->title, $record->category?->name,
                 $rupees($record->amount_rupees), $record->notes, $approval, $by],
             'partner-ledger' => [$record->transaction_date->format('d M Y'), $record->partner?->name,

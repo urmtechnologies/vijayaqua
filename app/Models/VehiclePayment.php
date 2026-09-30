@@ -10,7 +10,7 @@ class VehiclePayment extends Model
 {
     use TracksCreator;
 
-    protected $fillable = ['reference_user_id', 'payment_date', 'entry_type', 'method', 'amount_rupees', 'note'];
+    protected $fillable = ['account_user_id', 'reference_user_id', 'payment_date', 'entry_type', 'method', 'amount_rupees', 'note'];
 
     protected function casts(): array
     {
@@ -20,5 +20,10 @@ class VehiclePayment extends Model
     public function referenceUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reference_user_id')->withTrashed();
+    }
+
+    public function accountUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'account_user_id')->withTrashed();
     }
 }

@@ -67,10 +67,6 @@ class ApprovalController extends Controller
                 $saleId = SalePayment::whereKey($id)->value('sale_id');
                 Sale::whereKey($saleId)->lockForUpdate()->firstOrFail();
             }
-            if ($module === 'vehicle-entries') {
-                $referenceId = VehicleEntry::whereKey($id)->value('reference_user_id');
-                User::withTrashed()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
-            }
             $record = self::MODELS[$module]::query()->lockForUpdate()->findOrFail($id);
             if ($record->approval_status !== 'pending') {
                 throw ValidationException::withMessages(['approval' => 'This record has already been reviewed.']);
@@ -91,16 +87,9 @@ class ApprovalController extends Controller
                 }
             }
             if ($module === 'vehicle-entries') {
-                $items = $record->items()->orderBy('product_id')->get();
-                if ($items->isEmpty()) throw ValidationException::withMessages(['approval' => 'Vehicle entry has no products.']);
-                $products = Product::withTrashed()->whereIn('id', $items->pluck('product_id'))
-                    ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-                foreach ($items as $item) {
-                    $product = $products->get($item->product_id);
-                    if (! $product || $product->trashed() || $product->status !== 'active' || $product->approval_status !== 'approved'
-                        || StockBalance::available($product->id) < $item->cartons) {
-                        throw ValidationException::withMessages(['approval' => 'Vehicle entry has an inactive product or insufficient stock.']);
-                    }
+                User::withTrashed()->whereKey($record->user_id)->lockForUpdate()->firstOrFail();
+                if (! $record->items()->exists()) {
+                    throw ValidationException::withMessages(['approval' => 'Vehicle entry has no products.']);
                 }
             }
             if ($module === 'payments') {

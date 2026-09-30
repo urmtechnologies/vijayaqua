@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', $entry ? 'Edit Vehicle Entry' : 'Add Vehicle Entry')
 @section('page-title', $entry ? 'Edit Vehicle Entry' : 'Add Vehicle Entry')
-@section('page-action')<a href="{{ $entry ? route('vehicle-entries.account', $entry->reference_user_id) : route('vehicle-entries.index') }}" class="btn btn-outline-secondary">Back</a>@endsection
+@section('page-action')<a href="{{ $entry ? route('vehicle-entries.account', $entry->user_id) : route('vehicle-entries.index') }}" class="btn btn-outline-secondary">Back</a>@endsection
 @section('content')
 @php
     $rows = old('items', $entry?->items->map(fn ($item) => ['product_id' => $item->product_id, 'cartons' => $item->cartons])->all() ?? []);
@@ -37,8 +37,8 @@
             @if($products->isEmpty())<p class="text-danger small">Add an approved active product before recording a trip.</p>@endif
         </div>
     </div>
-    <div class="card-footer d-flex justify-content-between align-items-center gap-2 flex-wrap"><small class="text-muted">{{ auth()->user()->role === 'admin' ? 'Admin entries count immediately.' : 'Entry will count after admin approval.' }}</small>
-        <button id="submitVehicleEntry" type="submit" class="btn btn-primary" @disabled($products->isEmpty())><span class="spinner-border spinner-border-sm d-none me-1" id="vehicleSubmitSpinner"></span>{{ $entry ? 'Save Changes' : (auth()->user()->role === 'admin' ? 'Save Entry' : 'Send for Approval') }}</button>
+    <div class="card-footer d-flex justify-content-between align-items-center gap-2 flex-wrap"><small class="text-muted">{{ $entry?->approval_status === 'approved' ? 'Approved entry' : 'Entry will count after admin approval.' }}</small>
+        <button id="submitVehicleEntry" type="submit" class="btn btn-primary" @disabled($products->isEmpty())><span class="spinner-border spinner-border-sm d-none me-1" id="vehicleSubmitSpinner"></span>{{ $entry ? 'Save Changes' : 'Send for Approval' }}</button>
     </div>
 </form>
 <template id="vehicleRowTemplate"><div class="va-vehicle-row" data-vehicle-row><span class="va-vehicle-check"><i class="mdi mdi-package-variant-closed"></i></span>

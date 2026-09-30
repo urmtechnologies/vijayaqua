@@ -28,12 +28,25 @@
                 @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             @if(auth()->user()->role === 'admin')
-            <div class="col-12"><label for="partnerAttachment" class="form-label">Attachment (JPG, PNG or WebP)</label>
-                <input id="partnerAttachment" type="file" name="attachment" accept="image/jpeg,image/png,image/webp" class="form-control @error('attachment') is-invalid @enderror">
-                <small class="text-muted">Saved as a compressed WebP image (up to 5 MB upload).</small>
-                @error('attachment')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                @if($entry?->attachment_path)<div class="mt-2"><a href="{{ asset($entry->attachment_path) }}" target="_blank" rel="noopener">View current attachment</a>
-                    <label class="ms-3"><input type="checkbox" name="remove_attachment" value="1"> Remove attachment</label></div>@endif
+            @php $attachmentPaths = $entry?->attachment_paths ?? []; @endphp
+            <div class="col-12" data-partner-images data-max-images="{{ \App\Support\PartnerAttachment::MAX_IMAGES }}">
+                <label for="partnerAttachments" class="form-label">{{ count($attachmentPaths) ? 'Add more images' : 'Attachments' }}</label>
+                <input id="partnerAttachments" type="file" name="attachments[]" multiple accept="image/jpeg,image/png,image/webp" class="form-control" data-partner-file>
+                <small class="text-muted">Up to 10 images · 5 MB each · JPG, PNG or WebP</small>
+                @if($attachmentPaths)
+                <div class="va-partner-images mt-3">
+                    @foreach($attachmentPaths as $path)
+                    <div class="va-partner-image" data-existing-image>
+                        <a href="{{ asset($path) }}" target="_blank" rel="noopener"><img src="{{ asset($path) }}" alt="Attachment {{ $loop->iteration }}" loading="lazy"></a>
+                        <label class="va-partner-image-remove"><input type="checkbox" name="remove_attachments[]" value="{{ $path }}" @checked(in_array($path, (array) old('remove_attachments', []), true))> Remove</label>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+                <div class="va-partner-images mt-3" data-partner-previews></div>
+                <p class="text-danger small mb-0 mt-2" role="status" data-partner-image-error hidden></p>
+                @if($errors->has('attachments') || $errors->has('attachments.*'))<p class="text-danger small mt-2 mb-0">{{ $errors->first('attachments') ?: $errors->first('attachments.*') }}</p>@endif
+                @if($errors->has('remove_attachments') || $errors->has('remove_attachments.*'))<p class="text-danger small mt-2 mb-0">{{ $errors->first('remove_attachments') ?: $errors->first('remove_attachments.*') }}</p>@endif
             </div>
             @endif
         </div>

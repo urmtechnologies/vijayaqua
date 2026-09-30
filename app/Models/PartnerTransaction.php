@@ -13,11 +13,11 @@ class PartnerTransaction extends Model
 {
     use SoftDeletes, TracksCreator, TracksEditor, RequiresApproval;
 
-    protected $fillable = ['partner_account_id', 'transaction_date', 'type', 'amount_rupees', 'note', 'attachment_path'];
+    protected $fillable = ['partner_account_id', 'transaction_date', 'type', 'amount_rupees', 'note', 'attachment_paths'];
 
     protected function casts(): array
     {
-        return ['transaction_date' => 'date'];
+        return ['transaction_date' => 'date', 'attachment_paths' => 'array'];
     }
 
     public function partner(): BelongsTo

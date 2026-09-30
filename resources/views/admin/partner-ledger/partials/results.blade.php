@@ -12,7 +12,8 @@
             <td><a href="{{ route('partners.show', $entry->partner) }}">{{ $entry->partner->name }}</a></td>
             <td><span class="badge {{ $entry->type === 'send' ? 'bg-warning text-dark' : 'bg-success' }}">{{ ucfirst($entry->type) }}</span> @include('shared.approval-status', ['record' => $entry])</td>
             <td><strong>₹{{ \App\Support\RupeeAmount::format($entry->amount_rupees) }}</strong></td>
-            <td class="va-ledger-note" title="{{ $entry->note }}">{{ $entry->note ?: '—' }} @if($entry->attachment_path)<a href="{{ asset($entry->attachment_path) }}" target="_blank" rel="noopener" class="d-inline-block ms-1">Attachment</a>@endif</td>
+            <td class="va-ledger-note" title="{{ $entry->note }}">{{ $entry->note ?: '—' }}
+                @if($entry->attachment_paths)<div class="va-partner-thumbnails mt-2">@foreach($entry->attachment_paths as $path)<a href="{{ asset($path) }}" target="_blank" rel="noopener"><img src="{{ asset($path) }}" alt="Attachment {{ $loop->iteration }}" loading="lazy"></a>@endforeach</div>@endif</td>
             <td>{{ $entry->creator?->name ?? 'System' }}@if($entry->updated_by)<br><small class="text-muted">Edited by {{ $entry->editor?->name ?? 'System' }}</small>@endif</td>
             <td class="text-end text-nowrap">@if(\App\Support\Access::canEdit('partner-ledger', $entry))<a href="{{ route('partner-ledger.edit', $entry) }}" class="btn btn-sm btn-outline-secondary">Edit</a>@endif
                 @if(\App\Support\Access::canDelete('partner-ledger', $entry))<form method="POST" action="{{ route('partner-ledger.destroy', $entry) }}" class="d-inline">@csrf @method('DELETE')

@@ -17,5 +17,5 @@
     </div>
 </div>
 @endsection
-@push('styles')<link rel="stylesheet" href="{{ asset('assets/css/sales.css') }}"><link rel="stylesheet" href="{{ asset('assets/css/operations.css') }}">@endpush
+@push('styles')<link rel="stylesheet" href="{{ asset('assets/css/partner-attachments.css') }}"><link rel="stylesheet" href="{{ asset('assets/css/sales.css') }}"><link rel="stylesheet" href="{{ asset('assets/css/operations.css') }}">@endpush
 @push('scripts')<script src="{{ asset('assets/js/ledger-list.js') }}" defer></script>@endpush

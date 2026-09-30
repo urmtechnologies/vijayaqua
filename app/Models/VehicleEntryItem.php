@@ -11,7 +11,7 @@ class VehicleEntryItem extends Model
 
     public function entry(): BelongsTo
     {
-        return $this->belongsTo(VehicleEntry::class, 'vehicle_entry_id')->where('approval_status', 'approved');
+        return $this->belongsTo(VehicleEntry::class, 'vehicle_entry_id');
     }
 
     public function product(): BelongsTo

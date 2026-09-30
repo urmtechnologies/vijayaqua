@@ -6,11 +6,11 @@ use App\Models\{VehicleEntry, VehiclePayment};
 
 final class VehicleWallet
 {
-    public static function totals(int $referenceUserId): array
+    public static function totals(int $accountUserId): array
     {
-        $charged = SaleMoney::paise((string) VehicleEntry::query()->where('reference_user_id', $referenceUserId)
+        $charged = SaleMoney::paise((string) VehicleEntry::query()->where('user_id', $accountUserId)
             ->where('approval_status', 'approved')->sum('amount_rupees'));
-        $payments = VehiclePayment::query()->where('reference_user_id', $referenceUserId);
+        $payments = VehiclePayment::query()->where('account_user_id', $accountUserId);
         $credit = SaleMoney::paise((string) (clone $payments)->where('entry_type', 'credit')->sum('amount_rupees'));
         $debit = SaleMoney::paise((string) (clone $payments)->where('entry_type', 'debit')->sum('amount_rupees'));
 

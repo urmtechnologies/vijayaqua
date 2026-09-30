@@ -1,0 +1,34 @@
+VIJAY AQUA - VEHICLE / PARTNER UPDATE
+Base: main commit 7b6c0e2
+
+APPLY
+1. Extract this ZIP and copy the app, database, public, resources, tests and docs folders into my-project. Replace matching files.
+2. In the project folder run:
+   php artisan migrate
+   php artisan optimize:clear
+
+VEHICLE
+- Direct entry list with Pending / Approved filter and View action.
+- View opens /vehicle-entries/accounts/{creator_user_id}: all trips added by that user across every reference, Total Payment, Total Paid, Balance, central Credit / Debit and payment history.
+- Only approved trip amounts enter the wallet. Credit means paid to the user; debit means returned payment. Calculations use integer paise.
+- Vehicle tracking does not check or subtract stock; approved sales retain the existing stock calculation.
+- Admin can approve, edit and manage wallet payments, but cannot create a vehicle entry. Staff creation follows assigned permissions and needs admin approval.
+- The reference dropdown and server validation exclude the creator and admin. Reference is trip metadata; the wallet belongs to the user who added the trips.
+- Search, pagination, approval and wallet payment refresh asynchronously with loading indicators.
+
+PARTNER STATUS
+- Admin can select multiple images, preview them, remove individual images and add more on edit.
+- Up to 10 images per transaction, 5 MB per image. JPG, PNG and WebP are compressed to WebP in public/uploads/partners. PHP GD WebP support is required.
+- All image paths are stored in partner_transactions.attachment_paths as one JSON array.
+- The new 000004 migration preserves the existing single attachment, including archived transactions, and removes the old single-path column.
+- Editing without selecting/removing images preserves the existing images. Only selected images are deleted after a successful update.
+
+VERIFICATION
+PHP 8.3.6, Laravel from the existing composer.lock, SQLite.
+VehicleWorkspaceTest + PartnerAttachmentsTest: 19 tests passed, including creator grouping across different references and preserved legacy payments.
+PHP and JavaScript syntax, Blade compilation and git diff whitespace checks passed.
+Full suite before the final migration guard: 65 tests / 719 assertions; 9 existing Sales/Salary failures also reproduce on the supplied 7b6c0e2 baseline. No new failing case appeared.
+Tests/TestCase.php preserves the historical 12026 migration IDs and orders that mistyped year chronologically for fresh test databases.
+
+Targeted test command:
+php artisan test --filter="VehicleWorkspaceTest|PartnerAttachmentsTest"

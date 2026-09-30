@@ -27,6 +27,9 @@ class AuthorizeOperation
             abort_unless($request->user()->role === 'admin', 403);
             return $next($request);
         }
+        if (in_array($name, ['vehicle-entries.create', 'vehicle-entries.store'], true)) {
+            abort_if($request->user()->role === 'admin', 403);
+        }
 
         $module = explode('.', $name)[0];
         if ($module === 'customers') $module = 'sales';

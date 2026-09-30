@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Support\Access;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\UpcomingOrder;
 use App\Models\UpcomingOrderItem;
+use App\Support\Access;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +28,9 @@ class UpcomingOrderController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $query = Access::scope(UpcomingOrder::query(), 'upcoming-orders');
-        if ($approval = $filters['approval'] ?? null) $query->where('approval_status', $approval);
+        if ($approval = $filters['approval'] ?? null) {
+            $query->where('approval_status', $approval);
+        }
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(function ($q) use ($search): void {
                 $q->whereHas('customer', function ($customer) use ($search): void {
@@ -37,8 +39,12 @@ class UpcomingOrderController extends Controller
                 })->orWhereHas('items', fn ($items) => $items->where('product_name', 'like', '%'.$search.'%'));
             });
         }
-        if ($from = $filters['from'] ?? null) $query->whereDate('scheduled_date', '>=', $from);
-        if ($to = $filters['to'] ?? null) $query->whereDate('scheduled_date', '<=', $to);
+        if ($from = $filters['from'] ?? null) {
+            $query->whereDate('scheduled_date', '>=', $from);
+        }
+        if ($to = $filters['to'] ?? null) {
+            $query->whereDate('scheduled_date', '<=', $to);
+        }
 
         $summary = [
             'orders' => (clone $query)->count(),
@@ -46,8 +52,11 @@ class UpcomingOrderController extends Controller
                 ->whereIn('upcoming_order_id', (clone $query)->select('upcoming_orders.id'))->sum('cartons'),
         ];
         $query->with(['customer', 'creator', 'editor', 'approver'])->withCount('items')->withSum('items as carton_total', 'cartons');
-        if (($filters['sort'] ?? 'soonest') === 'latest') $query->orderByDesc('scheduled_date')->orderByDesc('id');
-        else $query->orderBy('scheduled_date')->orderBy('id');
+        if (($filters['sort'] ?? 'soonest') === 'latest') {
+            $query->orderByDesc('scheduled_date')->orderByDesc('id');
+        } else {
+            $query->orderBy('scheduled_date')->orderBy('id');
+        }
         $orders = $query->paginate(10)->withQueryString();
 
         return $request->ajax()
@@ -61,7 +70,9 @@ class UpcomingOrderController extends Controller
         $customer = is_string($mobile) && preg_match('/^[0-9]{10}$/', $mobile)
             ? Customer::where('mobile', $mobile)->first() : null;
         if ($customer && ! Access::all('upcoming-orders')
-            && ! $customer->upcomingOrders()->where('user_id', auth()->id())->exists()) $customer = null;
+            && ! $customer->upcomingOrders()->where('user_id', auth()->id())->exists()) {
+            $customer = null;
+        }
 
         return view('admin.upcoming-orders.create', [
             'order' => null,

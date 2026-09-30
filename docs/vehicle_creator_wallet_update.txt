@@ -1,0 +1,26 @@
+VEHICLE WALLET - GROUP BY ADDED-BY USER
+Apply over the previous Vehicle / Partner update already shown in your screenshots.
+
+1. Copy these folders into my-project and replace matching files:
+   app, database, resources, tests, docs
+2. Run in the project folder:
+   php artisan migrate
+   php artisan optimize:clear
+
+FLOW
+- Each entry shows the name and phone of the user who added it. Reference is shown below in small text.
+- Every View link for that creator opens the same /vehicle-entries/accounts/{creator_user_id} page.
+- That page includes all of this user's vehicle entries across all references, one wallet, central credit/debit and payment history.
+- Total Payment includes approved entries; Total Paid is credits minus returned debits; Balance is Total Payment minus Total Paid.
+- Example: Naresh adds 2500 for Mahesh and 2000 + 1200 for Vikash. All three belong to Naresh's 5700 wallet.
+- Changing a trip's reference does not move its balance or payment history to another account.
+- Admin creation, self-reference restrictions, mandatory approval, stock behavior and existing asynchronous refresh stay as in the previous update.
+
+EXISTING PAYMENTS
+Migration 000005 adds vehicle_payments.account_user_id. It associates existing payments with the creator of the approved trips and retains the old reference, amount, date, method and added-by user for audit. No payment is deleted or duplicated.
+If an old payment's reference was used by multiple creators, the migration identifies that payment and asks for its actual account_user_id rather than assigning it to the wrong user. Set that row's account_user_id to the intended creator and run migrate again. New wallet payments are blocked for affected accounts until that ownership is assigned.
+
+VALIDATION
+VehicleWorkspaceTest and PartnerAttachmentsTest: 19 feature tests passed on PHP 8.3.6 / SQLite. Checks include the exact 5700 example, separate creator wallets, credit/debit, reference edits, role restrictions and payment migration/retry.
+Blade compilation, PHP syntax and git diff checks passed.
+The full regression suite retained the same 9 existing Sales/Salary failures seen on the supplied baseline; no new failing case was added.

@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PartnerLedgerController extends Controller
@@ -54,9 +55,9 @@ class PartnerLedgerController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        $path = $request->hasFile('attachment') ? PartnerAttachment::save($request->file('attachment')) : null;
+        $paths = PartnerAttachment::saveMany($request->file('attachments', []) ?? []);
         try {
-            DB::transaction(function () use ($data, $path): void {
+            DB::transaction(function () use ($data, $paths): void {
                 $partner = PartnerAccount::createOrFirst(
                     ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
                 );
@@ -66,11 +67,11 @@ class PartnerLedgerController extends Controller
                     'type' => $data['type'],
                     'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
                     'note' => $data['note'] ?? null,
-                    'attachment_path' => $path,
+                    'attachment_paths' => $paths,
                 ]);
             }, 3);
         } catch (\Throwable $error) {
-            PartnerAttachment::delete($path);
+            foreach ($paths as $path) PartnerAttachment::delete($path);
             throw $error;
         }
 
@@ -91,14 +92,22 @@ class PartnerLedgerController extends Controller
 
     public function update(Request $request, PartnerTransaction $transaction): RedirectResponse
     {
-        $data = $this->validated($request);
-        $path = $request->hasFile('attachment') ? PartnerAttachment::save($request->file('attachment')) : null;
-        $previous = null;
+        $data = $this->validated($request, $transaction);
+        $paths = PartnerAttachment::saveMany($request->file('attachments', []) ?? []);
+        $removed = [];
         try {
-            DB::transaction(function () use ($data, $transaction, $path, &$previous): void {
+            DB::transaction(function () use ($data, $transaction, $paths, &$removed): void {
                 $transaction = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
                 abort_unless(Access::canEdit('partner-ledger', $transaction), 403);
-                $previous = $transaction->attachment_path;
+                $current = $transaction->attachment_paths ?? [];
+                $removed = $data['remove_attachments'] ?? [];
+                if (array_diff($removed, $current)) {
+                    throw ValidationException::withMessages(['remove_attachments' => 'An image has already changed. Reload this page and try again.']);
+                }
+                $kept = array_values(array_diff($current, $removed));
+                if (count($kept) + count($paths) > PartnerAttachment::MAX_IMAGES) {
+                    throw ValidationException::withMessages(['attachments' => 'Keep a maximum of '.PartnerAttachment::MAX_IMAGES.' images per transaction.']);
+                }
                 $partner = PartnerAccount::createOrFirst(
                     ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
                 );
@@ -108,37 +117,36 @@ class PartnerLedgerController extends Controller
                     'type' => $data['type'],
                     'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
                     'note' => $data['note'] ?? null,
-                    'attachment_path' => $path ?? (($data['remove_attachment'] ?? false) && auth()->user()->role === 'admin' ? null : $previous),
+                    'attachment_paths' => array_merge($kept, $paths),
                 ]);
                 $transaction->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
             }, 3);
         } catch (\Throwable $error) {
-            PartnerAttachment::delete($path);
+            foreach ($paths as $path) PartnerAttachment::delete($path);
             throw $error;
         }
-        if ($path || ($data['remove_attachment'] ?? false)) PartnerAttachment::delete($previous);
+        foreach ($removed as $path) PartnerAttachment::delete($path);
 
         return redirect()->route('partner-ledger.index')->with('success', 'Partner transaction updated.');
     }
 
     public function destroy(PartnerTransaction $transaction): RedirectResponse
     {
-        $oldPath = null;
-        DB::transaction(function () use ($transaction, &$oldPath): void {
+        $oldPaths = [];
+        DB::transaction(function () use ($transaction, &$oldPaths): void {
             $record = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
             abort_unless(Access::canDelete('partner-ledger', $record), 403);
-            $oldPath = $record->attachment_path;
+            $oldPaths = $record->attachment_paths ?? [];
             $record->delete();
         }, 3);
-        PartnerAttachment::delete($oldPath);
+        foreach ($oldPaths as $path) PartnerAttachment::delete($path);
 
         return back()->with('success', 'Partner transaction removed.');
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?PartnerTransaction $transaction = null): array
     {
-        abort_if($request->hasFile('attachment') && $request->user()->role !== 'admin', 403);
-        abort_if($request->boolean('remove_attachment') && $request->user()->role !== 'admin', 403);
+        abort_if(($request->hasFile('attachments') || $request->filled('remove_attachments')) && $request->user()->role !== 'admin', 403);
         if (is_string($request->input('partner_name'))) {
             $request->merge(['partner_name' => preg_replace('/\s+/u', ' ', trim($request->input('partner_name')))]);
         }
@@ -149,8 +157,10 @@ class PartnerLedgerController extends Controller
             'type' => ['required', Rule::in(['send', 'receive'])],
             'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
             'note' => ['nullable', 'string', 'max:3000'],
-            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'remove_attachment' => ['nullable', 'boolean'],
+            'attachments' => ['nullable', 'array', 'max:'.PartnerAttachment::MAX_IMAGES],
+            'attachments.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_attachments' => ['nullable', 'array', 'max:'.PartnerAttachment::MAX_IMAGES],
+            'remove_attachments.*' => ['required', 'string', 'distinct', Rule::in($transaction?->attachment_paths ?? [])],
         ]);
     }
 

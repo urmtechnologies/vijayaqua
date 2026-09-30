@@ -19,11 +19,13 @@
                 <tr><td>#{{ $record->id }}
                     @if($module === 'attendance') · {{ $record->employee?->name }} · {{ $record->work_date->format('d M Y') }} @endif
                     @if($module === 'sales') · {{ $record->invoice_no }} @endif
-                    @if($module === 'vehicle-entries') · {{ $record->referenceUser?->name }} · {{ $record->from_destination }} → {{ $record->to_destination }} @endif
+                    @if($module === 'vehicle-entries') · {{ $record->creator?->name }} · {{ $record->from_destination }} → {{ $record->to_destination }}<small class="d-block text-muted">Reference: {{ $record->referenceUser?->name }}</small> @endif
                     </td><td>{{ $record->creator?->name ?? 'System' }}</td><td>{{ $record->created_at->format('d M Y, h:i A') }}</td>
-                    <td class="text-end"><form method="POST" action="{{ route('approvals.approve', ['module' => $module, 'id' => $record->id]) }}" class="va-approval-form">@csrf
+                    <td class="text-end"><div class="d-flex gap-2 justify-content-end">
+                        @if($module === 'vehicle-entries')<a href="{{ route('vehicle-entries.account', $record->user_id) }}" class="btn btn-sm btn-outline-primary">View</a>@endif
+                        <form method="POST" action="{{ route('approvals.approve', ['module' => $module, 'id' => $record->id]) }}" class="va-approval-form">@csrf
                         <button class="btn btn-sm btn-success" type="submit">Approve</button>
-                    </form></td></tr>
+                    </form></div></td></tr>
             @endforeach
             </tbody></table></div>
             @if($selected !== '')@include('shared.pagination', ['paginator' => $records, 'label' => 'Approval pages'])@endif
