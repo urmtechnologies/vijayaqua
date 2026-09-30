@@ -123,7 +123,7 @@ class StockEntryController extends Controller
             foreach ($productIds as $productId) {
                 $receivedAfterEdit = StockBalance::received((int) $productId)
                     - ($entry->approval_status === 'approved' ? (int) $old->get($productId, 0) : 0) + (int) $new->get($productId, 0);
-                if ($receivedAfterEdit < StockBalance::sold((int) $productId)) {
+                if ($receivedAfterEdit < StockBalance::sold((int) $productId) + StockBalance::dispatched((int) $productId)) {
                     throw ValidationException::withMessages([
                         'items' => 'This edit would reduce stock below cartons already sold.',
                     ]);
@@ -146,7 +146,7 @@ class StockEntryController extends Controller
             $old = $entry->items()->pluck('cartons', 'product_id');
             Product::withTrashed()->whereIn('id', $old->keys())->orderBy('id')->lockForUpdate()->get();
             foreach ($old as $productId => $cartons) {
-                if (StockBalance::received((int) $productId) - ($entry->approval_status === 'approved' ? (int) $cartons : 0) < StockBalance::sold((int) $productId)) {
+                if (StockBalance::received((int) $productId) - ($entry->approval_status === 'approved' ? (int) $cartons : 0) < StockBalance::sold((int) $productId) + StockBalance::dispatched((int) $productId)) {
                     throw ValidationException::withMessages(['stock_entry' => 'Cannot delete stock already used by sales.']);
                 }
             }

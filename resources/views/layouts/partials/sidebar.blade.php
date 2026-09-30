@@ -8,6 +8,7 @@
         <li class="menu-title">Modules</li>
         @if(Access::allowed('sales') || Access::allowed('sales', 'create'))
         <li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'active' : '' }}"><i class="ri-shopping-bag-3-line"></i><span>Sales</span></a></li>@endif
+        @if(Access::allowed('vehicle-entries') || Access::allowed('vehicle-entries', 'create'))<li><a href="{{ route('vehicle-entries.index') }}" class="{{ request()->routeIs('vehicle-entries.*') ? 'active' : '' }}"><i class="mdi mdi-truck-outline"></i><span>Vehicle Entries</span></a></li>@endif
         @if(Access::allowed('upcoming-orders'))<li><a href="{{ route('upcoming-orders.index') }}" class="{{ request()->routeIs('upcoming-orders.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-clock-outline"></i><span>Upcoming Orders</span></a></li>@endif
         @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*', 'salaries.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Staff Calendar</span></a></li>@endif
         @if(Access::allowed('stock-entries') || Access::allowed('stock-entries', 'create') || (Access::allowed('stock') && Access::all('stock')))
@@ -25,6 +26,7 @@
         @if(auth()->user()->role === 'admin')<li><a href="{{ route('approvals.index') }}" class="{{ request()->routeIs('approvals.*') ? 'active' : '' }}"><i class="mdi mdi-check-circle-outline"></i><span>Approvals</span></a></li>@endif
         <li class="menu-title">Settings</li>
         @if(Access::allowed('products'))<li><a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'active' : '' }}"><i class="mdi mdi-package-variant"></i><span>Products Setting</span></a></li>@endif
+        @if(auth()->user()->role === 'admin')<li><a href="{{ route('expense-categories.index') }}" class="{{ request()->routeIs('expense-categories.*') ? 'active' : '' }}"><i class="mdi mdi-tag-multiple-outline"></i><span>Expense Categories</span></a></li>@endif
         <li><a href="{{ route('password.edit') }}" class="{{ request()->routeIs('password.*') ? 'active' : '' }}"><i class="mdi mdi-lock-outline"></i><span>Change Password</span></a></li>
     </ul></div></div>
 </div>

@@ -1,4 +1,4 @@
-<form method="POST" action="{{ $entry ? route('partner-ledger.update', $entry) : route('partner-ledger.store') }}" data-safe-submit>
+<form method="POST" enctype="multipart/form-data" action="{{ $entry ? route('partner-ledger.update', $entry) : route('partner-ledger.store') }}" data-safe-submit>
     @csrf
     @if($entry) @method('PUT') @endif
     <div class="card">
@@ -27,6 +27,15 @@
                 <textarea id="partnerNote" name="note" class="form-control @error('note') is-invalid @enderror" rows="4" maxlength="3000">{{ old('note', $entry?->note) }}</textarea>
                 @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
+            @if(auth()->user()->role === 'admin')
+            <div class="col-12"><label for="partnerAttachment" class="form-label">Attachment (JPG, PNG or WebP)</label>
+                <input id="partnerAttachment" type="file" name="attachment" accept="image/jpeg,image/png,image/webp" class="form-control @error('attachment') is-invalid @enderror">
+                <small class="text-muted">Saved as a compressed WebP image (up to 5 MB upload).</small>
+                @error('attachment')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                @if($entry?->attachment_path)<div class="mt-2"><a href="{{ asset($entry->attachment_path) }}" target="_blank" rel="noopener">View current attachment</a>
+                    <label class="ms-3"><input type="checkbox" name="remove_attachment" value="1"> Remove attachment</label></div>@endif
+            </div>
+            @endif
         </div>
         <div class="card-footer d-flex justify-content-end gap-2"><a href="{{ route('partner-ledger.index') }}" class="btn btn-light">Cancel</a>
             <button type="submit" class="btn btn-primary" data-submit-button><span class="spinner-border spinner-border-sm me-1 d-none" data-submit-spinner aria-hidden="true"></span><span data-submit-label>{{ $entry ? 'Save Changes' : 'Record Transaction' }}</span></button>

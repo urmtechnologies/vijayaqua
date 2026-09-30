@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, Expense, PartnerTransaction, Product, Sale, SalePayment, StockEntry, UpcomingOrder, User};
+use App\Models\{Attendance, Expense, PartnerTransaction, Product, Sale, SalePayment, StockEntry, UpcomingOrder, User, VehicleEntry};
 use App\Support\StockBalance;
 use App\Support\{CustomerWallet, SaleMoney};
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -19,6 +20,7 @@ class ApprovalController extends Controller
         'sales' => Sale::class, 'payments' => SalePayment::class, 'expenses' => Expense::class,
         'partner-ledger' => PartnerTransaction::class, 'upcoming-orders' => UpcomingOrder::class,
         'attendance' => Attendance::class,
+        'vehicle-entries' => VehicleEntry::class,
     ];
 
     public function index(Request $request): View
@@ -27,22 +29,33 @@ class ApprovalController extends Controller
             'module' => ['nullable', 'in:'.implode(',', array_keys(self::MODELS))],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
+        $counts = [];
+        foreach (self::MODELS as $name => $model) {
+            $countQuery = $model::query()->where('approval_status', 'pending');
+            if ($name === 'sales') $countQuery->where('is_draft', false);
+            if ($name === 'payments') $countQuery->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'));
+            $counts[$name] = $countQuery->count();
+        }
         $modules = self::MODELS;
         if ($request->filled('module')) $modules = [$request->input('module') => $modules[$request->input('module')]];
         $groups = [];
         foreach ($modules as $module => $model) {
             $query = $model::query()->where('approval_status', 'pending')->with('creator');
             if ($module === 'attendance') $query->with('employee');
+            if ($module === 'vehicle-entries') $query->with('referenceUser');
             if ($module === 'payments') $query->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'));
             if ($module === 'sales') $query->where('is_draft', false);
             $groups[$module] = $query->orderBy('created_at')->orderBy('id')
                 ->when($request->filled('module'), fn ($q) => $q->paginate(20)->withQueryString(), fn ($q) => $q->limit(10)->get());
         }
 
-        return view('admin.approvals.index', compact('groups'));
+        $selected = $request->input('module', '');
+        return $request->ajax()
+            ? view('admin.approvals.partials.workspace', compact('groups', 'counts', 'selected'))
+            : view('admin.approvals.index', compact('groups', 'counts', 'selected'));
     }
 
-    public function approve(string $module, int $id): RedirectResponse
+    public function approve(Request $request, string $module, int $id): RedirectResponse|JsonResponse
     {
         abort_unless(isset(self::MODELS[$module]), 404);
         DB::transaction(function () use ($module, $id): void {
@@ -53,6 +66,10 @@ class ApprovalController extends Controller
             if ($module === 'payments') {
                 $saleId = SalePayment::whereKey($id)->value('sale_id');
                 Sale::whereKey($saleId)->lockForUpdate()->firstOrFail();
+            }
+            if ($module === 'vehicle-entries') {
+                $referenceId = VehicleEntry::whereKey($id)->value('reference_user_id');
+                User::withTrashed()->whereKey($referenceId)->lockForUpdate()->firstOrFail();
             }
             $record = self::MODELS[$module]::query()->lockForUpdate()->findOrFail($id);
             if ($record->approval_status !== 'pending') {
@@ -70,6 +87,19 @@ class ApprovalController extends Controller
                     }
                     if (StockBalance::available($item->product_id) < $item->cartons) {
                         throw ValidationException::withMessages(['approval' => 'Not enough approved stock for this sale.']);
+                    }
+                }
+            }
+            if ($module === 'vehicle-entries') {
+                $items = $record->items()->orderBy('product_id')->get();
+                if ($items->isEmpty()) throw ValidationException::withMessages(['approval' => 'Vehicle entry has no products.']);
+                $products = Product::withTrashed()->whereIn('id', $items->pluck('product_id'))
+                    ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+                foreach ($items as $item) {
+                    $product = $products->get($item->product_id);
+                    if (! $product || $product->trashed() || $product->status !== 'active' || $product->approval_status !== 'approved'
+                        || StockBalance::available($product->id) < $item->cartons) {
+                        throw ValidationException::withMessages(['approval' => 'Vehicle entry has an inactive product or insufficient stock.']);
                     }
                 }
             }
@@ -98,6 +128,7 @@ class ApprovalController extends Controller
             if ($module === 'payments') CustomerWallet::refresh($record->sale->customer_id);
         }, 3);
 
-        return back()->with('success', 'Record approved.');
+        return $request->expectsJson() ? response()->json(['message' => 'Record approved.'])
+            : back()->with('success', 'Record approved.');
     }
 }

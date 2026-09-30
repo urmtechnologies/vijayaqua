@@ -42,7 +42,7 @@ trait RequiresApproval
             'User' => 'users', 'Product' => 'products', 'StockEntry' => 'stock-entries',
             'Sale' => 'sales', 'SalePayment' => 'payments', 'Expense' => 'expenses',
             'PartnerTransaction' => 'partner-ledger', 'UpcomingOrder' => 'upcoming-orders',
-            'Attendance' => 'attendance', default => null,
+            'Attendance' => 'attendance', 'VehicleEntry' => 'vehicle-entries', default => null,
         };
     }
 }

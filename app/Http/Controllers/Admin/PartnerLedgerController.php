@@ -7,6 +7,7 @@ use App\Support\Access;
 use App\Models\PartnerAccount;
 use App\Models\PartnerTransaction;
 use App\Support\PartnerBalance;
+use App\Support\PartnerAttachment;
 use App\Support\RupeeAmount;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -53,18 +54,25 @@ class PartnerLedgerController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validated($request);
-        DB::transaction(function () use ($data): void {
-            $partner = PartnerAccount::createOrFirst(
-                ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
-            );
-            PartnerTransaction::create([
-                'partner_account_id' => $partner->id,
-                'transaction_date' => $data['transaction_date'],
-                'type' => $data['type'],
-                'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
-                'note' => $data['note'] ?? null,
-            ]);
-        }, 3);
+        $path = $request->hasFile('attachment') ? PartnerAttachment::save($request->file('attachment')) : null;
+        try {
+            DB::transaction(function () use ($data, $path): void {
+                $partner = PartnerAccount::createOrFirst(
+                    ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
+                );
+                PartnerTransaction::create([
+                    'partner_account_id' => $partner->id,
+                    'transaction_date' => $data['transaction_date'],
+                    'type' => $data['type'],
+                    'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
+                    'note' => $data['note'] ?? null,
+                    'attachment_path' => $path,
+                ]);
+            }, 3);
+        } catch (\Throwable $error) {
+            PartnerAttachment::delete($path);
+            throw $error;
+        }
 
         return redirect()->route('partner-ledger.index')->with('success', 'Partner transaction recorded.');
     }
@@ -84,38 +92,53 @@ class PartnerLedgerController extends Controller
     public function update(Request $request, PartnerTransaction $transaction): RedirectResponse
     {
         $data = $this->validated($request);
-        DB::transaction(function () use ($data, $transaction): void {
-            $transaction = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
-            abort_unless(Access::canEdit('partner-ledger', $transaction), 403);
-            $partner = PartnerAccount::createOrFirst(
-                ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
-            );
-            $transaction->update([
-                'partner_account_id' => $partner->id,
-                'transaction_date' => $data['transaction_date'],
-                'type' => $data['type'],
-                'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
-                'note' => $data['note'] ?? null,
-            ]);
-            $transaction->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
-        }, 3);
+        $path = $request->hasFile('attachment') ? PartnerAttachment::save($request->file('attachment')) : null;
+        $previous = null;
+        try {
+            DB::transaction(function () use ($data, $transaction, $path, &$previous): void {
+                $transaction = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
+                abort_unless(Access::canEdit('partner-ledger', $transaction), 403);
+                $previous = $transaction->attachment_path;
+                $partner = PartnerAccount::createOrFirst(
+                    ['key' => Str::lower($data['partner_name'])], ['name' => $data['partner_name']]
+                );
+                $transaction->update([
+                    'partner_account_id' => $partner->id,
+                    'transaction_date' => $data['transaction_date'],
+                    'type' => $data['type'],
+                    'amount_rupees' => RupeeAmount::int($data['amount_rupees'], 'amount_rupees'),
+                    'note' => $data['note'] ?? null,
+                    'attachment_path' => $path ?? (($data['remove_attachment'] ?? false) && auth()->user()->role === 'admin' ? null : $previous),
+                ]);
+                $transaction->forceFill(['updated_by' => auth()->id(), 'updated_at' => now()])->save();
+            }, 3);
+        } catch (\Throwable $error) {
+            PartnerAttachment::delete($path);
+            throw $error;
+        }
+        if ($path || ($data['remove_attachment'] ?? false)) PartnerAttachment::delete($previous);
 
         return redirect()->route('partner-ledger.index')->with('success', 'Partner transaction updated.');
     }
 
     public function destroy(PartnerTransaction $transaction): RedirectResponse
     {
-        DB::transaction(function () use ($transaction): void {
+        $oldPath = null;
+        DB::transaction(function () use ($transaction, &$oldPath): void {
             $record = PartnerTransaction::whereKey($transaction->id)->lockForUpdate()->firstOrFail();
             abort_unless(Access::canDelete('partner-ledger', $record), 403);
+            $oldPath = $record->attachment_path;
             $record->delete();
         }, 3);
+        PartnerAttachment::delete($oldPath);
 
         return back()->with('success', 'Partner transaction removed.');
     }
 
     private function validated(Request $request): array
     {
+        abort_if($request->hasFile('attachment') && $request->user()->role !== 'admin', 403);
+        abort_if($request->boolean('remove_attachment') && $request->user()->role !== 'admin', 403);
         if (is_string($request->input('partner_name'))) {
             $request->merge(['partner_name' => preg_replace('/\s+/u', ' ', trim($request->input('partner_name')))]);
         }
@@ -126,6 +149,8 @@ class PartnerLedgerController extends Controller
             'type' => ['required', Rule::in(['send', 'receive'])],
             'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
             'note' => ['nullable', 'string', 'max:3000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_attachment' => ['nullable', 'boolean'],
         ]);
     }
 

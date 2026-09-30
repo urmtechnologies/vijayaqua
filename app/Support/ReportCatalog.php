@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Models\{Attendance, Expense, PartnerTransaction, Product, Salary, Sale, SalePayment, StockEntry, StockEntryItem, UpcomingOrder, UpcomingOrderItem, User};
+use App\Models\{Attendance, Expense, PartnerTransaction, Product, Salary, Sale, SalePayment, StockEntry, StockEntryItem, UpcomingOrder, UpcomingOrderItem, User, VehicleEntry};
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -10,6 +10,7 @@ final class ReportCatalog
 {
     public const LABELS = [
         'sales' => 'Sales', 'payments' => 'Customer payments',
+        'vehicle-entries' => 'Vehicle entries',
         'stock-entries' => 'Stock entries', 'stock' => 'Available stock',
         'expenses' => 'Expenses', 'partner-ledger' => 'Partner status',
         'upcoming-orders' => 'Upcoming orders', 'attendance' => 'Attendance',
@@ -36,9 +37,12 @@ final class ReportCatalog
                 ->withSum(['payments as credit_total' => fn ($q) => $q->where('approval_status', 'approved')->where('entry_type', 'credit')], 'amount_rupees')
                 ->withSum(['payments as debit_total' => fn ($q) => $q->where('approval_status', 'approved')->where('entry_type', 'debit')], 'amount_rupees'), 'sales'),
             'payments' => Access::scope(SalePayment::query()->whereHas('sale')->with(['sale.customer', 'creator']), 'payments'),
+            'vehicle-entries' => Access::scope(VehicleEntry::query()->with(['referenceUser', 'items.product', 'creator'])
+                ->withSum('items as carton_total', 'cartons'), 'vehicle-entries'),
             'stock-entries' => Access::scope(StockEntry::query()->with(['items.product', 'creator']), 'stock-entries'),
             'stock' => Product::query()->where('approval_status', 'approved')
-                ->withSum('stockItems as stock_received', 'cartons')->withSum('soldItems as stock_sold', 'cartons'),
+                ->withSum('stockItems as stock_received', 'cartons')->withSum('soldItems as stock_sold', 'cartons')
+                ->withSum('vehicleItems as stock_dispatched', 'cartons'),
             'expenses' => Access::scope(Expense::query()->with(['category', 'creator']), 'expenses'),
             'partner-ledger' => Access::scope(PartnerTransaction::query()->with(['partner', 'creator']), 'partner-ledger'),
             'upcoming-orders' => Access::scope(UpcomingOrder::query()->with(['customer', 'creator'])->withSum('items as carton_total', 'cartons'), 'upcoming-orders'),
@@ -58,7 +62,7 @@ final class ReportCatalog
             $query->where('approval_status', $filters['approval']);
         }
         $dateColumn = match ($module) {
-            'sales' => 'sale_date', 'payments' => 'payment_date', 'stock-entries' => 'entry_date',
+            'sales' => 'sale_date', 'payments' => 'payment_date', 'stock-entries', 'vehicle-entries' => 'entry_date',
             'expenses' => 'expense_date', 'partner-ledger' => 'transaction_date',
             'upcoming-orders' => 'scheduled_date', 'attendance' => 'work_date',
             'salaries' => 'month', 'stock' => null, default => 'created_at',
@@ -76,6 +80,8 @@ final class ReportCatalog
                 $like = '%'.$search.'%';
                 match ($module) {
                     'sales' => $q->where('invoice_no', 'like', $like)->orWhereHas('customer', fn ($c) => $c->where('name', 'like', $like)->orWhere('mobile', 'like', $like)),
+                    'vehicle-entries' => $q->where('from_destination', 'like', $like)->orWhere('to_destination', 'like', $like)
+                        ->orWhereHas('referenceUser', fn ($u) => $u->where('name', 'like', $like)),
                     'payments' => $q->whereHas('sale', fn ($s) => $s->where('invoice_no', 'like', $like)->orWhereHas('customer', fn ($c) => $c->where('name', 'like', $like)->orWhere('mobile', 'like', $like))),
                     'stock-entries' => $q->whereHas('items', fn ($i) => $i
                         ->when(($filters['type'] ?? null) && in_array($filters['type'], ['manufacture', 'purchase'], true),
@@ -108,7 +114,7 @@ final class ReportCatalog
             $query->where('status', $filters['status']);
         }
         if ($module === 'stock' && ($filters['availability'] ?? null)) {
-            $balance = "(SELECT COALESCE(SUM(i.cartons),0) FROM stock_entry_items i JOIN stock_entries e ON e.id=i.stock_entry_id AND e.deleted_at IS NULL AND e.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM sale_items i JOIN sales s ON s.id=i.sale_id AND s.deleted_at IS NULL AND s.approval_status='approved' WHERE i.product_id=products.id)";
+            $balance = "(SELECT COALESCE(SUM(i.cartons),0) FROM stock_entry_items i JOIN stock_entries e ON e.id=i.stock_entry_id AND e.deleted_at IS NULL AND e.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM sale_items i JOIN sales s ON s.id=i.sale_id AND s.deleted_at IS NULL AND s.approval_status='approved' WHERE i.product_id=products.id) - (SELECT COALESCE(SUM(i.cartons),0) FROM vehicle_entry_items i JOIN vehicle_entries v ON v.id=i.vehicle_entry_id AND v.deleted_at IS NULL AND v.approval_status='approved' WHERE i.product_id=products.id)";
             $query->whereRaw($balance.(($filters['availability'] === 'available') ? ' > 0' : ' <= 0'));
         }
         if ($module === 'sales' && in_array($filters['status'] ?? null, ['paid', 'due'], true)) {
@@ -134,8 +140,9 @@ final class ReportCatalog
         return match ($module) {
             'sales' => ['Date', 'Invoice', 'Party', 'Mobile', 'Total (Rs)', 'Paid (Rs)', 'Due (Rs)', 'Approval', 'Added by'],
             'payments' => ['Date', 'Invoice', 'Party', 'Type', 'Method', 'Amount (Rs)', 'Approval', 'Added by'],
+            'vehicle-entries' => ['Date', 'Reference user', 'From', 'To', 'Cartons', 'Amount (Rs)', 'Approval', 'Added by'],
             'stock-entries' => ['Date', 'Entry', 'Products / type', 'Cartons', 'Approval', 'Added by'],
-            'stock' => ['Product', 'Status', 'Received CTN', 'Sold CTN', 'Available CTN'],
+            'stock' => ['Product', 'Status', 'Received CTN', 'Sold CTN', 'Vehicle CTN', 'Available CTN'],
             'expenses' => ['Date', 'Title', 'Category', 'Amount (Rs)', 'Notes', 'Approval', 'Added by'],
             'partner-ledger' => ['Date', 'Partner', 'Type', 'Amount (Rs)', 'Note', 'Approval', 'Added by'],
             'upcoming-orders' => ['Date', 'Customer', 'Mobile', 'Cartons', 'Note', 'Approval', 'Added by'],
@@ -152,6 +159,7 @@ final class ReportCatalog
         if (! in_array($module, ['salaries', 'stock'], true)) $approved->where('approval_status', 'approved');
         [$label, $value] = match ($module) {
             'sales' => ['Approved sales', (float) $approved->sum('total_rupees')],
+            'vehicle-entries' => ['Approved vehicle charges', (float) $approved->sum('amount_rupees')],
             'payments' => ['Net received', (float) (clone $approved)->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->where('entry_type', 'credit')->sum('amount_rupees')
                 - (float) (clone $approved)->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->where('entry_type', 'debit')->sum('amount_rupees')],
             'expenses' => ['Approved expenses', (float) $approved->sum('amount_rupees')],
@@ -169,7 +177,7 @@ final class ReportCatalog
         $unit = in_array($module, ['stock-entries', 'upcoming-orders'], true) ? ' CTN'
             : ($module === 'attendance' ? ' hours' : '');
         $prefix = $unit === '' ? 'Rs ' : '';
-        return ['label' => $label, 'value' => $prefix.number_format($value, in_array($module, ['salaries', 'attendance', 'sales', 'payments'], true) ? 2 : 0).$unit];
+        return ['label' => $label, 'value' => $prefix.number_format($value, in_array($module, ['salaries', 'attendance', 'sales', 'payments', 'vehicle-entries'], true) ? 2 : 0).$unit];
     }
 
     public static function row(string $module, $record): array
@@ -186,11 +194,15 @@ final class ReportCatalog
                 $rupees(\App\Support\SaleMoney::decimal(max(0, \App\Support\SaleMoney::paise($record->total_rupees) - \App\Support\SaleMoney::paise($paid)))), $approval, $by],
             'payments' => [$record->payment_date->format('d M Y'), $record->sale?->invoice_no, $record->sale?->customer?->name,
                 ucfirst($record->entry_type), ucfirst($record->method), $rupees($record->amount_rupees), $approval, $by],
+            'vehicle-entries' => [$record->entry_date->format('d M Y'), $record->referenceUser?->name,
+                $record->from_destination, $record->to_destination, (string) ($record->carton_total ?? 0),
+                $rupees($record->amount_rupees), $approval, $by],
             'stock-entries' => [$record->entry_date->format('d M Y'), '#'.$record->id,
                 $record->items->map(fn ($i) => ($i->product?->name ?? 'Product').': '.($i->type ?: 'Not set'))->implode(', '),
                 (string) ($record->carton_total ?? 0), $approval, $by],
             'stock' => [$record->name, ucfirst($record->status), (string) ($record->stock_received ?? 0),
-                (string) ($record->stock_sold ?? 0), (string) ((int) ($record->stock_received ?? 0) - (int) ($record->stock_sold ?? 0))],
+                (string) ($record->stock_sold ?? 0), (string) ($record->stock_dispatched ?? 0),
+                (string) ((int) ($record->stock_received ?? 0) - (int) ($record->stock_sold ?? 0) - (int) ($record->stock_dispatched ?? 0))],
             'expenses' => [$record->expense_date->format('d M Y'), $record->title, $record->category?->name,
                 $rupees($record->amount_rupees), $record->notes, $approval, $by],
             'partner-ledger' => [$record->transaction_date->format('d M Y'), $record->partner?->name,

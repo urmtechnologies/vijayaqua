@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Attendance, Expense, PartnerTransaction, Product, Salary, Sale, SalePayment, StockEntry, StockEntryItem, UpcomingOrder, User};
+use App\Models\{Attendance, Expense, PartnerTransaction, Product, Salary, Sale, SalePayment, StockEntry, StockEntryItem, UpcomingOrder, User, VehicleEntry, VehicleEntryItem};
 use App\Support\{Access, ReportCatalog};
 use Illuminate\View\View;
 
@@ -42,8 +42,9 @@ class DashboardController extends Controller
                 ->whereHas('entry', fn ($q) => $q->where('approval_status', 'approved'))->sum('cartons');
             $sold = (int) \App\Models\SaleItem::whereIn('product_id', clone $productIds)
                 ->whereHas('sale', fn ($q) => $q->where('approval_status', 'approved'))->sum('cartons');
-            $add('stock', 'Available stock', number_format($received - $sold).' CTN',
-                'Across all approved stock and sales', 'mdi-package-variant-closed', 'stock.overview');
+            $dispatched = (int) VehicleEntryItem::whereIn('product_id', clone $productIds)->whereHas('entry')->sum('cartons');
+            $add('stock', 'Available stock', number_format($received - $sold - $dispatched).' CTN',
+                'Approved stock less sales and vehicle dispatches', 'mdi-package-variant-closed', 'stock.overview');
         }
         if (Access::allowed('stock-entries')) {
             $entryIds = Access::scope(StockEntry::query(), 'stock-entries')
@@ -71,6 +72,12 @@ class DashboardController extends Controller
             $add('partner-ledger', 'Partner net sent', 'Rs '.number_format($sent - $received),
                 'Approved send minus receive, all time', 'mdi-swap-horizontal', 'partner-ledger.index');
         }
+        if (Access::allowed('vehicle-entries')) {
+            $vehicles = Access::scope(VehicleEntry::query(), 'vehicle-entries')->where('approval_status', 'approved')
+                ->where('entry_date', '>=', $from)->where('entry_date', '<', $next);
+            $add('vehicle-entries', 'Vehicle charges', 'Rs '.\App\Support\SaleMoney::format((string) $vehicles->sum('amount_rupees')),
+                'Approved dispatches this month', 'mdi-truck-outline', 'vehicle-entries.index');
+        }
         if (Access::allowed('attendance')) {
             $attendance = Access::scope(Attendance::query(), 'attendance')->where('work_date', '>=', $from)->where('work_date', '<', $next);
             $add('attendance', 'Attendance', number_format($attendance->count()),
@@ -96,6 +103,7 @@ class DashboardController extends Controller
             ['sales', 'Add Sale', 'sales.create'], ['payments', 'Add Payment', 'payments.create'],
             ['stock-entries', 'Add Stock', 'stock-entries.create'], ['upcoming-orders', 'Add Order', 'upcoming-orders.create'],
             ['expenses', 'Add Expense', 'expenses.create'], ['partner-ledger', 'Add Partner Entry', 'partner-ledger.create'],
+            ['vehicle-entries', 'Add Vehicle Entry', 'vehicle-entries.create'],
             ['attendance', 'Add Attendance', 'attendance.create'],
         ] as [$module, $label, $route]) {
             if (Access::allowed($module, 'create')) $shortcuts[] = compact('label', 'route');
@@ -106,9 +114,10 @@ class DashboardController extends Controller
         if (auth()->user()->role === 'admin') {
             $pending = 0;
             foreach ([User::class, Product::class, StockEntry::class, Sale::class, SalePayment::class,
-                Expense::class, PartnerTransaction::class, UpcomingOrder::class, Attendance::class] as $model) {
+                Expense::class, PartnerTransaction::class, UpcomingOrder::class, Attendance::class, VehicleEntry::class] as $model) {
                 $query = $model::query()->where('approval_status', 'pending');
                 if ($model === Sale::class) $query->where('is_draft', false);
+                if ($model === SalePayment::class) $query->whereHas('sale', fn ($sale) => $sale->where('approval_status', 'approved'));
                 $pending += $query->count();
             }
         }

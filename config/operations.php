@@ -5,6 +5,7 @@ return [
     'modules' => [
         'users' => 'Users',
         'sales' => 'Sales and invoices',
+        'vehicle-entries' => 'Vehicle entries',
         'payments' => 'Customer payments',
         'upcoming-orders' => 'Upcoming orders',
         'attendance' => 'Attendance',

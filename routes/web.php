@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\ExpenseCategoryController;
+use App\Http\Controllers\Admin\VehicleEntryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PartnerLedgerController;
@@ -35,6 +37,9 @@ Route::middleware(['auth', 'operation'])->group(function () {
     Route::get('/customers/lookup', [CustomerController::class, 'lookup'])->name('customers.lookup');
     Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
     Route::resource('sales', SaleController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+    Route::get('/vehicle-entries/accounts/{user}', [VehicleEntryController::class, 'account'])->withTrashed()->name('vehicle-entries.account');
+    Route::post('/vehicle-entries/accounts/{user}/payments', [VehicleEntryController::class, 'payment'])->name('vehicle-entries.payment');
+    Route::resource('vehicle-entries', VehicleEntryController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     Route::get('/payments/lookup', [PaymentController::class, 'lookup'])->name('payments.lookup');
     Route::resource('payments', PaymentController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     Route::get('/partners/{partner}', [PartnerLedgerController::class, 'account'])->name('partners.show');
@@ -44,6 +49,8 @@ Route::middleware(['auth', 'operation'])->group(function () {
     Route::resource('upcoming-orders', UpcomingOrderController::class)
         ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
     Route::resource('expenses', ExpenseController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+    Route::resource('expense-categories', ExpenseCategoryController::class)
+        ->parameters(['expense-categories' => 'category'])->only(['index', 'store', 'update', 'destroy']);
     Route::get('/attendance/mark-leave', [AttendanceController::class, 'leaveCreate'])->name('attendance.leave.create');
     Route::post('/attendance/leave', [AttendanceController::class, 'markLeave'])->name('attendance.leave');
     Route::resource('attendance', AttendanceController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);

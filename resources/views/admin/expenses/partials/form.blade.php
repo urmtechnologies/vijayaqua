@@ -9,10 +9,12 @@
                 @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-6"><label class="form-label" for="expenseCategory">Category <span class="text-danger">*</span></label>
-                <input id="expenseCategory" name="category_name" list="expenseCategorySuggestions" class="form-control @error('category_name') is-invalid @enderror" value="{{ old('category_name', $expense?->category?->name) }}" maxlength="80" placeholder="Choose or type a category" autocomplete="off" required>
-                <datalist id="expenseCategorySuggestions">@foreach($categories as $category)<option value="{{ $category->name }}"></option>@endforeach</datalist>
-                @error('category_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                <small class="text-muted">Existing categories appear as suggestions when you type.</small>
+                <select id="expenseCategory" name="expense_category_id" class="form-select @error('expense_category_id') is-invalid @enderror" required>
+                    <option value="">Select category</option>
+                    @foreach($categories as $category)<option value="{{ $category->id }}" @selected((string) old('expense_category_id', $expense?->expense_category_id) === (string) $category->id)>{{ $category->name }}</option>@endforeach
+                </select>
+                @error('expense_category_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                @if(auth()->user()->role === 'admin')<a class="small" href="{{ route('expense-categories.index') }}">Manage categories</a>@endif
             </div>
             <div class="col-md-6"><label class="form-label" for="expenseAmount">Amount (₹) <span class="text-danger">*</span></label>
                 <input type="number" id="expenseAmount" name="amount_rupees" class="form-control @error('amount_rupees') is-invalid @enderror" min="1" step="1" value="{{ old('amount_rupees', $expense?->amount_rupees) }}" required>

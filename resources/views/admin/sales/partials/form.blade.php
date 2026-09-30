@@ -21,7 +21,7 @@
             fn($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
-                'available' => max(0, (int) ($p->stock_received ?? 0) - (int) ($p->stock_sold ?? 0)),
+                'available' => max(0, (int) ($p->stock_received ?? 0) - (int) ($p->stock_sold ?? 0) - (int) ($p->stock_dispatched ?? 0)),
             ],
         )
         ->values();

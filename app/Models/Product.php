@@ -24,4 +24,9 @@ class Product extends Model
     {
         return $this->hasMany(SaleItem::class)->whereHas('sale');
     }
+
+    public function vehicleItems(): HasMany
+    {
+        return $this->hasMany(VehicleEntryItem::class)->whereHas('entry');
+    }
 }

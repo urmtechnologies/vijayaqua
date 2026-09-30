@@ -13,7 +13,7 @@ class PartnerTransaction extends Model
 {
     use SoftDeletes, TracksCreator, TracksEditor, RequiresApproval;
 
-    protected $fillable = ['partner_account_id', 'transaction_date', 'type', 'amount_rupees', 'note'];
+    protected $fillable = ['partner_account_id', 'transaction_date', 'type', 'amount_rupees', 'note', 'attachment_path'];
 
     protected function casts(): array
     {

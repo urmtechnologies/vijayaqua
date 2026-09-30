@@ -49,6 +49,7 @@ class CustomerController extends Controller
             ->orderByDesc('sale_date')->orderByDesc('id')->get(['id', 'invoice_no', 'sale_date', 'user_id']);
         $products = Product::query()->where('status', 'active')->where('approval_status', 'approved')
             ->withSum('stockItems as stock_received', 'cartons')->withSum('soldItems as stock_sold', 'cartons')
+            ->withSum('vehicleItems as stock_dispatched', 'cartons')
             ->orderBy('name')->get();
         $staff = User::query()->where('role', '!=', 'admin')->where('approval_status', 'approved')
             ->orderBy('name')->get(['id', 'name', 'mobile']);

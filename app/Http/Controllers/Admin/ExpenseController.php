@@ -59,7 +59,8 @@ class ExpenseController extends Controller
     {
         $data = $this->validated($request);
         DB::transaction(function () use ($data): void {
-            $category = $this->category($data['category_name']);
+            $category = isset($data['expense_category_id'])
+                ? ExpenseCategory::findOrFail($data['expense_category_id']) : $this->category($data['category_name']);
             Expense::create([
                 'expense_date' => $data['expense_date'], 'title' => trim($data['title']),
                 'expense_category_id' => $category->id,
@@ -84,7 +85,8 @@ class ExpenseController extends Controller
         DB::transaction(function () use ($expense, $data): void {
             $expense = Expense::whereKey($expense->id)->lockForUpdate()->firstOrFail();
             abort_unless(Access::canEdit('expenses', $expense), 403);
-            $category = $this->category($data['category_name']);
+            $category = isset($data['expense_category_id'])
+                ? ExpenseCategory::findOrFail($data['expense_category_id']) : $this->category($data['category_name']);
             $expense->update([
                 'expense_date' => $data['expense_date'], 'title' => trim($data['title']),
                 'expense_category_id' => $category->id,
@@ -117,7 +119,8 @@ class ExpenseController extends Controller
         return $request->validate([
             'expense_date' => ['required', 'date_format:Y-m-d'],
             'title' => ['required', 'string', 'max:150'],
-            'category_name' => ['required', 'string', 'max:80'],
+            'expense_category_id' => ['required_without:category_name', 'nullable', 'integer', Rule::exists('expense_categories', 'id')],
+            'category_name' => ['required_without:expense_category_id', 'nullable', 'string', 'max:80'],
             'amount_rupees' => ['required', 'regex:/^[1-9][0-9]{0,15}$/'],
             'notes' => ['nullable', 'string', 'max:3000'],
         ]);

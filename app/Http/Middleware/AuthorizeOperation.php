@@ -19,6 +19,14 @@ class AuthorizeOperation
             abort_unless($request->user()->role === 'admin', 403);
             return $next($request);
         }
+        if (str_starts_with($name, 'expense-categories.')) {
+            abort_unless($request->user()->role === 'admin', 403);
+            return $next($request);
+        }
+        if ($name === 'vehicle-entries.payment') {
+            abort_unless($request->user()->role === 'admin', 403);
+            return $next($request);
+        }
 
         $module = explode('.', $name)[0];
         if ($module === 'customers') $module = 'sales';
@@ -29,6 +37,8 @@ class AuthorizeOperation
             default => 'view',
         };
         if ($name === 'attendance.leave') $action = 'create';
+        if (in_array($name, ['vehicle-entries.index', 'vehicle-entries.account'], true)
+            && Access::allowed('vehicle-entries', 'create')) $action = 'create';
         if ($name === 'sales.show') $action = 'invoice';
         if (in_array($name, ['sales.index', 'customers.show'], true)
             && Access::allowed('sales', 'create')) $action = 'create';
@@ -52,8 +62,7 @@ class AuthorizeOperation
         foreach ($request->route()->parameters() as $record) {
             if ($record instanceof \Illuminate\Database\Eloquent\Model) {
                 // Accounts and customers are shared identities; their lists are scoped by child records.
-                if (in_array($module, ['sales', 'partner-ledger'], true)
-                    && in_array($name, ['customers.show', 'partners.show'], true)) break;
+                if (in_array($name, ['customers.show', 'partners.show', 'vehicle-entries.account'], true)) break;
                 if (in_array($name, ['sales.edit', 'sales.update'], true) && $record instanceof \App\Models\Sale
                     && $record->is_draft && Access::allowed('sales', 'create')
                     && (int) $record->user_id === (int) $request->user()->id) continue;

@@ -177,7 +177,7 @@ class SaleController extends Controller
             $query->where(fn ($active) => $active->where('status', 'active')->where('approval_status', 'approved')->whereNull('deleted_at'))
                 ->orWhereIn('id', $existingIds);
         })->withSum('stockItems as stock_received', 'cartons')
-            ->withSum('soldItems as stock_sold', 'cartons')->orderBy('name')->get();
+            ->withSum('soldItems as stock_sold', 'cartons')->withSum('vehicleItems as stock_dispatched', 'cartons')->orderBy('name')->get();
         $staff = User::query()->where('role', '!=', 'admin')->where('approval_status', 'approved')
             ->orderBy('name')->get(['id', 'name', 'mobile']);
         $paid = SaleMoney::decimal($sale->netPaidPaise());
