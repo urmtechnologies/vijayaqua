@@ -30,7 +30,7 @@ class SalaryController extends Controller
         if ($month = $filters['month'] ?? null) $query->whereDate('month', $month.'-01');
         // The balance includes all generated months through this run and every advance through that month.
         $balance = '(SELECT COALESCE(SUM(s2.earned_paise),0) FROM salaries s2 WHERE s2.employee_id=salaries.employee_id AND s2.month<=salaries.month)'
-            .' - (SELECT COALESCE(SUM(a.amount_paise),0) FROM salary_advances a WHERE a.employee_id=salaries.employee_id AND a.month<=salaries.month)'
+            .' - (SELECT COALESCE(SUM(CASE WHEN a.entry_type = \'debit\' THEN -a.amount_paise ELSE a.amount_paise END),0) FROM salary_advances a WHERE a.employee_id=salaries.employee_id AND a.month<=salaries.month)'
             .' - (SELECT COALESCE(SUM(p.amount_paise),0) FROM salary_payments p JOIN salaries s3 ON s3.id=p.salary_id WHERE s3.employee_id=salaries.employee_id AND s3.month<=salaries.month)';
         if (($filters['status'] ?? null) === 'due') $query->whereRaw($balance.' > 0');
         if (($filters['status'] ?? null) === 'settled') $query->whereRaw($balance.' <= 0');
@@ -79,7 +79,8 @@ class SalaryController extends Controller
             ]);
         }, 3);
 
-        return redirect()->route('salaries.show', $salary)->with('success', 'Monthly salary generated. Attendance for this month is locked.');
+        return redirect()->route('attendance.index', ['month' => $data['month'], 'employee_id' => $salary->employee_id])
+            ->with('success', 'Monthly salary generated. Attendance for this month is locked.');
     }
 
     public function show(Salary $salary): View
@@ -101,19 +102,32 @@ class SalaryController extends Controller
             'month' => ['required', 'date_format:Y-m'],
             'paid_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'amount_rupees' => ['required', 'regex:/^(?:(?:[1-9][0-9]{0,10})(?:\.[0-9]{1,2})?|0\.(?:0[1-9]|[1-9][0-9]?))$/'],
+            'entry_type' => ['nullable', Rule::in(['credit', 'debit'])],
             'method' => ['required', Rule::in(['cash', 'upi', 'bank', 'other'])],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
         DB::transaction(function () use ($data): void {
             User::whereKey($data['employee_id'])->lockForUpdate()->firstOrFail();
+            $type = $data['entry_type'] ?? 'credit';
+            $amount = SalaryMath::paise($data['amount_rupees']);
+            if ($type === 'debit') {
+                $entries = SalaryAdvance::where('employee_id', $data['employee_id']);
+                $paid = (int) (clone $entries)->where('entry_type', 'credit')->sum('amount_paise')
+                    + (int) \App\Models\SalaryPayment::join('salaries', 'salaries.id', '=', 'salary_payments.salary_id')
+                        ->where('salaries.employee_id', $data['employee_id'])->sum('salary_payments.amount_paise');
+                $returned = (int) (clone $entries)->where('entry_type', 'debit')->sum('amount_paise');
+                if ($amount > $paid - $returned) {
+                    throw ValidationException::withMessages(['amount_rupees' => 'Returned amount cannot exceed the amount already paid to this staff member.']);
+                }
+            }
             SalaryAdvance::create([
                 'employee_id' => $data['employee_id'], 'month' => $data['month'].'-01',
-                'paid_on' => $data['paid_on'], 'amount_paise' => SalaryMath::paise($data['amount_rupees']),
+                'paid_on' => $data['paid_on'], 'amount_paise' => $amount, 'entry_type' => $type,
                 'method' => $data['method'], 'note' => $data['note'] ?? null,
             ]);
         }, 3);
 
-        return back()->with('success', 'Advance recorded for '.$data['month'].'. It will reduce salary due.');
+        return back()->with('success', ($data['entry_type'] ?? 'credit') === 'debit' ? 'Returned payment recorded.' : 'Salary payment recorded.');
     }
 
     public function payment(Request $request, Salary $salary): RedirectResponse
@@ -179,7 +193,9 @@ class SalaryController extends Controller
                 'earned' => SalaryMath::earned($monthlyPaise, $minutes, $date)]);
         }
         $earned = $existing ? (int) $existing->earned_paise : $days->sum('earned');
-        $advance = (int) SalaryAdvance::where('employee_id', $employeeId)->whereDate('month', $start->toDateString())->sum('amount_paise');
+        $entries = SalaryAdvance::where('employee_id', $employeeId)->whereDate('month', $start->toDateString());
+        $advance = (int) (clone $entries)->where('entry_type', 'credit')->sum('amount_paise')
+            - (int) (clone $entries)->where('entry_type', 'debit')->sum('amount_paise');
         $carry = SalaryMath::before($employeeId, $start->toDateString());
         $paid = $existing ? (int) $existing->payments()->sum('amount_paise') : 0;
         return compact('employee', 'start', 'existing', 'monthlyPaise', 'days', 'earned', 'advance', 'carry', 'paid') + [

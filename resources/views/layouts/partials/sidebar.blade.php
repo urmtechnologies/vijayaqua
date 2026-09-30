@@ -9,7 +9,7 @@
         @if(Access::allowed('sales') || Access::allowed('sales', 'create'))
         <li><a href="{{ route('sales.index') }}" class="{{ request()->routeIs('sales.*', 'customers.*', 'payments.*') ? 'active' : '' }}"><i class="ri-shopping-bag-3-line"></i><span>Sales</span></a></li>@endif
         @if(Access::allowed('upcoming-orders'))<li><a href="{{ route('upcoming-orders.index') }}" class="{{ request()->routeIs('upcoming-orders.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-clock-outline"></i><span>Upcoming Orders</span></a></li>@endif
-        @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Attendance</span></a></li>@endif
+        @if(Access::allowed('attendance'))<li><a href="{{ route('attendance.index') }}" class="{{ request()->routeIs('attendance.*', 'salaries.*') ? 'active' : '' }}"><i class="mdi mdi-calendar-check-outline"></i><span>Attendance & Salary</span></a></li>@endif
         @if(Access::allowed('stock-entries') || Access::allowed('stock-entries', 'create') || (Access::allowed('stock') && Access::all('stock')))
         <li class="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'mm-active' : '' }}">
             <a href="#stock-submenu" class="has-arrow va-menu-toggle" aria-expanded="{{ request()->routeIs('stock.overview', 'stock-entries.*') ? 'true' : 'false' }}" aria-controls="stock-submenu"><i class="mdi mdi-package-variant-closed"></i><span>Stock Management</span></a>
@@ -21,7 +21,7 @@
         </li>@endif
         @if(Access::allowed('expenses'))<li><a href="{{ route('expenses.index') }}" class="{{ request()->routeIs('expenses.*') ? 'active' : '' }}"><i class="mdi mdi-cash-minus"></i><span>Expenses</span></a></li>@endif
         @if(Access::allowed('partner-ledger'))<li><a href="{{ route('partner-ledger.index') }}" class="{{ request()->routeIs('partner-ledger.*', 'partners.*') ? 'active' : '' }}"><i class="mdi mdi-swap-horizontal"></i><span>Partner Status</span></a></li>@endif
-        @if(Access::allowed('salaries'))<li><a href="{{ route('salaries.index') }}" class="{{ request()->routeIs('salaries.*') ? 'active' : '' }}"><i class="mdi mdi-wallet-outline"></i><span>Salary</span></a></li>@endif
+        @if(Access::allowed('salaries') && ! Access::allowed('attendance'))<li><a href="{{ route('salaries.index') }}" class="{{ request()->routeIs('salaries.*') ? 'active' : '' }}"><i class="mdi mdi-wallet-outline"></i><span>Salary</span></a></li>@endif
         @if(auth()->user()->role === 'admin')<li><a href="{{ route('approvals.index') }}" class="{{ request()->routeIs('approvals.*') ? 'active' : '' }}"><i class="mdi mdi-check-circle-outline"></i><span>Approvals</span></a></li>@endif
         <li class="menu-title">Settings</li>
         @if(Access::allowed('products'))<li><a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.*') ? 'active' : '' }}"><i class="mdi mdi-package-variant"></i><span>Products Setting</span></a></li>@endif

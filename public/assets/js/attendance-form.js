@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('hoursGroup').classList.toggle('d-none', !custom);
         hours.required = custom;
         hours.disabled = !custom;
+        const date = document.getElementById('work_date');
+        if (date) date.max = type.value === 'leave' ? date.dataset.leaveMax : date.dataset.today;
     };
     type.addEventListener('change', update);
     update();

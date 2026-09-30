@@ -1,5 +1,5 @@
 <div class="row g-2 mb-3">
-    @foreach(['Monthly rate' => $monthlyPaise, 'Earned this month' => $earned, 'Previous balance' => $carry, 'Advances this month' => $advance, 'Paid this month' => $paid, 'Balance through month' => $due] as $label => $value)
+    @foreach(['Monthly rate' => $monthlyPaise, 'Earned this month' => $earned, 'Previous balance' => $carry, 'Credit minus returns this month' => $advance, 'Paid this month' => $paid, 'Balance through month' => $due] as $label => $value)
         <div class="col-6 col-lg-4"><div class="va-people-metric"><small>{{ $label }}</small><strong>₹{{ \App\Support\SalaryMath::format($value) }}</strong></div></div>
     @endforeach
 </div>

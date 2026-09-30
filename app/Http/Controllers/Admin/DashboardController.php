@@ -79,7 +79,8 @@ class DashboardController extends Controller
         if (Access::allowed('salaries')) {
             $salaries = Access::scope(Salary::query(), 'salaries')->whereDate('month', $previous);
             $add('salaries', 'Last month salary', 'Rs '.number_format((float) $salaries->sum('earned_paise') / 100, 2),
-                'Generated salary for '.today()->startOfMonth()->subMonth()->format('M Y'), 'mdi-wallet-outline', 'salaries.index');
+                'Generated salary for '.today()->startOfMonth()->subMonth()->format('M Y'), 'mdi-wallet-outline',
+                Access::allowed('attendance') ? 'attendance.index' : 'salaries.index');
         }
         if (Access::allowed('products')) {
             $products = Access::scope(Product::query(), 'products')->where('approval_status', 'approved');
@@ -99,7 +100,7 @@ class DashboardController extends Controller
         ] as [$module, $label, $route]) {
             if (Access::allowed($module, 'create')) $shortcuts[] = compact('label', 'route');
         }
-        if (auth()->user()->role === 'admin') $shortcuts[] = ['label' => 'Generate Salary', 'route' => 'salaries.create'];
+        if (auth()->user()->role === 'admin') $shortcuts[] = ['label' => 'Manage Salary', 'route' => 'attendance.index'];
 
         $pending = null;
         if (auth()->user()->role === 'admin') {

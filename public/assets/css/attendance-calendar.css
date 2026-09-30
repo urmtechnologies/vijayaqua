@@ -1,0 +1,114 @@
+.va-staff-workspace { --staff-line: #e8edf4; --staff-ink: #203044; --staff-muted: #748398; min-width: 0; color: var(--staff-ink); }
+.va-staff-workspace .card { box-shadow: 0 3px 18px rgba(31, 54, 85, .045); border: 1px solid var(--staff-line); border-radius: 16px; }
+.va-staff-panel { margin-bottom: 16px; }
+.va-staff-panel .card-body { padding: 20px 22px; }
+.va-staff-section-heading, .va-staff-calendar-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.va-staff-section-heading h5, .va-staff-calendar-top h5 { font-size: 20px; margin: 2px 0 3px; font-weight: 700; }
+.va-staff-section-heading p { margin: 0; font-size: 13px; color: var(--staff-muted); }
+.va-staff-eyebrow { color: #8260b1; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 10px; }
+.va-staff-section-icon { width: 42px; height: 42px; flex: 0 0 42px; display: grid; place-items: center; border-radius: 12px; background: #f1eafa; color: #8058af; font-size: 23px; }
+.va-staff-icon-green { color: #14896e; background: #e6f6ef; }
+.va-staff-workspace .form-label { font-size: 12px; font-weight: 600; margin-bottom: 5px; }
+.va-staff-workspace .form-control, .va-staff-workspace .form-select { min-width: 0; }
+.va-staff-select-form { margin: 0 0 18px; }
+.va-staff-wallet-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
+.va-staff-wallet-name strong { font-size: 18px; }
+.va-staff-wallet-name span { color: var(--staff-muted); font-size: 12px; }
+.va-staff-wallet-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 14px 0; border-top: 1px solid var(--staff-line); border-bottom: 1px solid var(--staff-line); }
+.va-staff-wallet-metrics > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0 15px; border-right: 1px solid var(--staff-line); }
+.va-staff-wallet-metrics > div:first-child { padding-left: 0; }
+.va-staff-wallet-metrics > div:last-child { border: 0; }
+.va-staff-wallet-metrics small, .va-staff-month-overview small, .va-staff-salary-strip small { font-size: 11px; color: var(--staff-muted); }
+.va-staff-wallet-metrics strong { font-size: 18px; overflow-wrap: anywhere; }
+.va-staff-month-overview { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 16px; }
+.va-staff-month-overview > div { display: flex; flex-direction: column; min-width: 120px; }
+.va-staff-month-overview strong { font-size: 14px; }
+.va-staff-wallet-actions { margin-top: 16px; }
+.va-staff-generated { display: inline-block; color: #12745a; background: #e8f8f0; border-radius: 8px; padding: 8px 11px; font-size: 12px; font-weight: 700; }
+.va-staff-payment-form { margin-top: 16px; padding: 15px 0; border-top: 1px solid var(--staff-line); }
+.va-staff-history-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 5px 14px; margin: 10px 0 2px; }
+.va-staff-history-heading h6 { margin: 0; font-weight: 700; }
+.va-staff-history-heading small { color: var(--staff-muted); }
+.va-staff-history { max-height: 320px; overflow-y: auto; }
+.va-staff-transaction { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--staff-line); }
+.va-staff-transaction:last-child { border-bottom: 0; }
+.va-staff-transaction-main { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.va-staff-transaction-main > div { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.va-staff-transaction-main strong, .va-staff-transaction > strong { font-size: 13px; }
+.va-staff-transaction-main small { color: var(--staff-muted); font-size: 11px; }
+.va-staff-transaction-icon { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; }
+.va-staff-transaction-icon.is-credit { color: #149269; background: #e8f8f0; }
+.va-staff-transaction-icon.is-return { color: #c65353; background: #fff0f0; }
+.va-staff-transaction > strong { flex: 0 0 auto; white-space: nowrap; }
+.va-staff-calendar-area { margin-top: 20px; }
+.va-staff-calendar-top { margin-bottom: 12px; }
+.va-staff-month-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 0 0 12px; }
+.va-staff-month-arrow { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid #dce3ed; border-radius: 9px; background: #fff; font-size: 22px; line-height: 1; color: #42637f; }
+.va-staff-month-title { display: flex; align-items: baseline; gap: 9px; }
+.va-staff-month-title strong { white-space: nowrap; }
+.va-staff-month-title small { font-size: 11px; color: var(--staff-muted); white-space: nowrap; }
+.va-staff-month-input { width: 150px; margin-left: auto; }
+.va-staff-filter-form { margin: 0 0 14px; }
+.va-staff-legend { display: flex; flex-wrap: wrap; gap: 7px 18px; margin-bottom: 12px; color: #5f6d80; font-size: 11px; }
+.va-staff-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.va-staff-legend i { width: 7px; height: 7px; border-radius: 50%; background: #bec8d4; }
+.va-staff-legend i.is-present { background: #2da67c; }
+.va-staff-legend i.is-absent { background: #e57373; }
+.va-staff-legend i.is-pending { background: #e6ad45; }
+.va-staff-calendar-card { margin-bottom: 14px; padding: 16px; min-width: 0; }
+.va-staff-calendar-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 12px; }
+.va-staff-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.va-staff-person h6 { margin: 0; font-size: 15px; font-weight: 700; }
+.va-staff-person small { color: var(--staff-muted); font-size: 11px; }
+.va-staff-avatar { display: grid; place-items: center; width: 35px; height: 35px; flex: 0 0 35px; border-radius: 12px; color: #7955a4; background: #f1eafa; font-weight: 700; }
+.va-staff-mini-counts { display: flex; flex-wrap: wrap; gap: 5px 11px; font-size: 11px; font-weight: 700; }
+.va-staff-mini-counts .is-present { color: #188362; }
+.va-staff-mini-counts .is-absent { color: #c85b60; }
+.va-staff-mini-counts .is-pending { color: #ae7a22; }
+.va-staff-weekdays, .va-staff-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.va-staff-weekdays { margin-bottom: 6px; font-size: 11px; text-align: center; color: #718096; font-weight: 700; }
+.va-staff-weekdays span:last-child { color: #cc7579; }
+.va-staff-day, .va-staff-day-empty { min-width: 0; }
+.va-staff-day { display: flex; flex-direction: column; position: relative; min-height: 63px; gap: 2px; padding: 7px 9px; border: 1px solid #edf0f5; border-radius: 10px; color: #344157; background: #fafbfd; text-decoration: none; }
+a.va-staff-day:hover, a.va-staff-day:focus-visible { color: #234268; outline: 2px solid #a37acb; outline-offset: -2px; }
+.va-staff-day.is-present { background: #eff9f4; border-color: #daf0e4; }
+.va-staff-day.is-leave, .va-staff-day.is-absent { background: #fff3f3; border-color: #fae4e4; }
+.va-staff-day.is-pending { background: #fff8e9; border-color: #f7ebcc; }
+.va-staff-day.is-future { color: #a4adba; background: #fff; }
+.va-staff-day-number { font-size: 13px; font-weight: 700; }
+.va-staff-day-state { font-size: 10px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.va-staff-day-dot { position: absolute; right: 8px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: #c4ccd6; }
+.va-staff-day.is-present .va-staff-day-dot { background: #26a676; }
+.va-staff-day.is-leave .va-staff-day-dot, .va-staff-day.is-absent .va-staff-day-dot { background: #df6e73; }
+.va-staff-day.is-pending .va-staff-day-dot { background: #e0a83f; }
+.va-staff-day.is-future .va-staff-day-dot { background: transparent; }
+.va-staff-leave-notes { display: grid; gap: 5px; margin-top: 11px; padding: 10px 12px; border-radius: 9px; background: #fff6f6; font-size: 12px; }
+.va-staff-leave-notes > strong { color: #bd5a64; }
+.va-staff-leave-notes > div { display: flex; gap: 9px; min-width: 0; overflow-wrap: anywhere; }
+.va-staff-leave-notes time { flex: 0 0 auto; color: #ad6871; font-weight: 700; }
+.va-staff-salary-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--staff-line); }
+.va-staff-salary-strip > div { min-width: 0; display: flex; flex-direction: column; }
+.va-staff-salary-strip strong { font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+    .va-staff-panel .card-body { padding: 16px; }
+    .va-staff-calendar-card { padding: 12px; }
+    .va-staff-wallet-metrics, .va-staff-salary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 0; }
+    .va-staff-wallet-metrics > div { padding: 0 8px 0 0; border: 0; }
+    .va-staff-wallet-metrics strong { font-size: 15px; }
+    .va-staff-month-controls { gap: 7px; }
+    .va-staff-month-input { order: 2; width: calc(100% - 54px); margin: 0; }
+    .va-staff-month-controls > button { order: 3; }
+    .va-staff-days, .va-staff-weekdays { gap: 3px; }
+    .va-staff-day { min-height: 42px; padding: 5px; border-radius: 7px; }
+    .va-staff-day-number { font-size: 11px; }
+    .va-staff-day-state { display: none; }
+    .va-staff-day-dot { top: auto; right: 5px; bottom: 5px; width: 5px; height: 5px; }
+}
+@media (max-width: 390px) {
+    .va-staff-calendar-top { align-items: center; }
+    .va-staff-calendar-top h5 { font-size: 17px; }
+    .va-staff-calendar-top .btn { font-size: 11px; }
+    .va-staff-month-title small { display: none; }
+    .va-staff-day { min-height: 37px; padding: 4px; }
+    .va-staff-weekdays { font-size: 9px; }
+}

@@ -10,7 +10,7 @@ class SalaryAdvance extends Model
 {
     use TracksCreator;
 
-    protected $fillable = ['employee_id', 'month', 'paid_on', 'amount_paise', 'method', 'note'];
+    protected $fillable = ['employee_id', 'month', 'paid_on', 'amount_paise', 'entry_type', 'method', 'note'];
 
     protected function casts(): array
     {

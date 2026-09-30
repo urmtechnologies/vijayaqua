@@ -28,6 +28,7 @@ class AuthorizeOperation
             'create', 'store' => 'create', 'edit', 'update' => 'edit', 'destroy' => 'delete',
             default => 'view',
         };
+        if ($name === 'attendance.leave') $action = 'create';
         if ($name === 'sales.show') $action = 'invoice';
         if (in_array($name, ['sales.index', 'customers.show'], true)
             && Access::allowed('sales', 'create')) $action = 'create';

@@ -5,12 +5,13 @@
 @section('content')
 <div class="row"><div class="col-xl-7"><div class="card"><div class="card-body">
     <form method="POST" action="{{ $attendance ? route('attendance.update', $attendance) : route('attendance.store') }}" data-safe-submit>@csrf @if($attendance) @method('PUT') @endif
+        @if(request('from_calendar'))<input type="hidden" name="from_calendar" value="1">@endif
         <div class="row g-3">
             @if(auth()->user()->role === 'admin')
                 <div class="col-md-6"><label for="employee_id" class="form-label">Staff member</label><select id="employee_id" name="employee_id" class="form-select" required>
-                    <option value="">Select staff</option>@foreach($employees as $employee)<option value="{{ $employee->id }}" @selected(old('employee_id', $attendance?->employee_id) == $employee->id)>{{ $employee->name }} · {{ $employee->mobile }}</option>@endforeach
+                    <option value="">Select staff</option>@foreach($employees as $employee)<option value="{{ $employee->id }}" @selected(old('employee_id', $attendance?->employee_id ?? request('employee_id')) == $employee->id)>{{ $employee->name }} · {{ $employee->mobile }}</option>@endforeach
                 </select>@error('employee_id')<small class="text-danger">{{ $message }}</small>@enderror</div>
-                <div class="col-md-6"><label for="work_date" class="form-label">Date</label><input id="work_date" name="work_date" type="date" class="form-control" max="{{ now()->toDateString() }}" value="{{ old('work_date', $attendance?->work_date?->format('Y-m-d') ?? now()->toDateString()) }}" required>@error('work_date')<small class="text-danger">{{ $message }}</small>@enderror</div>
+                <div class="col-md-6"><label for="work_date" class="form-label">Date</label><input id="work_date" name="work_date" type="date" class="form-control" data-today="{{ now()->toDateString() }}" data-leave-max="{{ now()->addYear()->toDateString() }}" max="{{ old('type', $attendance?->type) === 'leave' ? now()->addYear()->toDateString() : now()->toDateString() }}" value="{{ old('work_date', $attendance?->work_date?->format('Y-m-d') ?? request('work_date', now()->toDateString())) }}" required>@error('work_date')<small class="text-danger">{{ $message }}</small>@enderror</div>
             @else
                 <div class="col-12"><div class="alert alert-info mb-0">Your attendance for {{ now()->format('d M Y') }}. One entry per day; you can edit it until approved.</div></div>
             @endif
